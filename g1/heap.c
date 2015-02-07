@@ -2,18 +2,23 @@
 #include <stdio.h>
 #include "heap.h"
 
+// Return parent of node i
 int heap_parent(int i) {
   return i / 2;
 }
 
+// Return left child of node i
 int heap_left(int i) {
   return 2 * i;
 }
 
+
+// Return right child of node i
 int heap_right(int i) {
   return 2 * i + 1;
 }
 
+// Preserve max heap property of heap
 void heap_max_heapify(heap* h) {
   for (int i = h->size - 1; i >= 0; --i) {
     if (heap_left(i) < h->size && h->root[heap_left(i)].priority > h->root[i].priority) {
@@ -31,27 +36,33 @@ void heap_max_heapify(heap* h) {
   }
 }
 
-// Build max heap
+// Initalize heap 
 void heap_initialize(heap* h) {
   h->size = 0;
   h->root = NULL;
   h->alloc_size = 0;
 }
 
+
+// Free memory and reset size variables
 void heap_clear(heap* h) {
   free(h->root);
   h->size = 0;
   h->alloc_size = 0;
 }
 
+
+// Return the number of nodes in the heap
 size_t heap_size(heap* h) {
   return h->size;
 }
 
+// Return the top (maximal priority) value
 void* heap_top(heap* h) {
   return h->root[0].value;
 }
 
+// Insert value with priority into the heap
 void heap_insert(heap* h, void* value, int priority) {
   node n = {value, priority};
   h->size++;
@@ -61,6 +72,7 @@ void heap_insert(heap* h, void* value, int priority) {
   heap_max_heapify(h);
 }
 
+// Pop top node off the heap and return value
 void* heap_pop(heap* h) {
   if (h->size > 0) {
     void* ptr = h->root[0].value;
