@@ -19,5 +19,5 @@ int main(void) {
     printf("Value pop number %d is: %d.\n", i, *((int*)heap_pop(&h)));
   }
   heap_clear(&h);
-  printf("Size is: %d.\n", heap_size(&h));
+  printf("Size is: %d.\n", (int)heap_size(&h));
 }
