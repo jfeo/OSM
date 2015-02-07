@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "heap.h"
 
 int heap_parent(int i) {
@@ -33,20 +34,22 @@ void heap_max_heapify(heap* h) {
 // Build max heap
 void heap_initialize(heap* h) {
   h->size = 0;
-  h->root = (node*)malloc(sizeof(node));
+  h->root = NULL;
   h->alloc_size = 0;
 }
 
 void heap_clear(heap* h) {
-  
+  free(h->root);
+  h->size = 0;
+  h->alloc_size = 0;
 }
 
 size_t heap_size(heap* h) {
-
+  return h->size;
 }
 
 void* heap_top(heap* h) {
-
+  return h->root[0].value;
 }
 
 void heap_insert(heap* h, void* value, int priority) {
