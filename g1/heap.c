@@ -53,8 +53,8 @@ void* heap_top(heap* h) {
 }
 
 void heap_insert(heap* h, void* value, int priority) {
-  h->size++;
   node n = {value, priority};
+  h->size++;
   h->alloc_size += sizeof(node);
   h->root = (node*)realloc(h->root, h->alloc_size);
   h->root[h->size - 1] = n;
@@ -62,13 +62,17 @@ void heap_insert(heap* h, void* value, int priority) {
 }
 
 void* heap_pop(heap* h) {
-  void* ptr = h->root[0].value;
-  h->alloc_size -= sizeof(node);
-  for (int i = 1; i < h->size; i++) {
-    h->root[i - 1] = h->root[i];
+  if (h->size > 0) {
+    void* ptr = h->root[0].value;
+    h->alloc_size -= sizeof(node);
+    for (int i = 1; i < h->size; i++) {
+      h->root[i - 1] = h->root[i];
+    }
+    h->root = (node*)realloc(h->root, h->alloc_size);
+    h->size--;
+    heap_max_heapify(h);
+    return ptr;
+  } else {
+    return NULL;
   }
-  h->root = (node*)realloc(h->root, h->alloc_size);
-  h->size--;
-  heap_max_heapify(h);
-  return ptr;
 }
