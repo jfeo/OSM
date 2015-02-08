@@ -3,10 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// Macro for printing name of function
+// and then running it
 #define run_test(fn_name)\
   printf("OK: %s\n", #fn_name);\
   fn_name();
 
+// Dummy pointers for testing
 static void *ONE = (void *)1;
 static void *TWO = (void *)2;
 static void *THREE = (void *)3;
