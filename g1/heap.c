@@ -2,18 +2,18 @@
 #include <stdio.h>
 #include "heap.h"
 
-// Return parent of node i
+// Return index of parent of node i
 int heap_parent(int i) {
   return i / 2;
 }
 
-// Return left child of node i
+// Return index of left child of node i
 int heap_left(int i) {
   return 2 * i;
 }
 
 
-// Return right child of node i
+// Return index of right child of node i
 int heap_right(int i) {
   return 2 * i + 1;
 }
