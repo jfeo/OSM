@@ -9,6 +9,7 @@ default: $(EXECUTABLE)
 
 $(EXECUTABLE): $(SOURCES)
 	$(CC) $(CFLAGS) -o $(EXECUTABLE) $(SOURCES)
+	./$(EXECUTABLE)
 
 run: $(EXECUTABLE)
 	./$(EXECUTABLE)

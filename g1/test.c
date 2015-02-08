@@ -1,23 +1,115 @@
 #include "heap.h"
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-int main(void) {
-  heap h;
-  heap_initialize(&h);
-  int v1 = 10;
-  heap_insert(&h, &v1, 10);
-  int v2 = 5;
-  heap_insert(&h, &v2, 5);
-  int v3 = 100;
-  heap_insert(&h, &v3, 100);
-  int v4 = 60;
-  heap_insert(&h, &v4, 60);
-  int v5 = 70;
-  heap_insert(&h, &v5, 70); 
-  for (int i = 1; i <= 5; i++) {
-    printf("Top value is: %d.\n", *((int*)heap_top(&h)));
-    printf("Value pop number %d is: %d.\n", i, *((int*)heap_pop(&h)));
-  }
-  heap_clear(&h);
-  printf("Size is: %d.\n", (int)heap_size(&h));
+#define run_test(fn_name)\
+  printf("OK: %s\n", #fn_name);\
+  fn_name();
+
+static void *ONE = (void *)1;
+static void *TWO = (void *)2;
+static void *THREE = (void *)3;
+
+/* int main(void) { */
+/*   heap h; */
+/*   heap_initialize(&h); */
+/*   int v1 = 10; */
+/*   heap_insert(&h, &v1, 10); */
+/*   int v2 = 5; */
+/*   heap_insert(&h, &v2, 5); */
+/*   int v3 = 100; */
+/*   heap_insert(&h, &v3, 100); */
+/*   int v4 = 60; */
+/*   heap_insert(&h, &v4, 60); */
+/*   int v5 = 70; */
+/*   heap_insert(&h, &v5, 70); */ 
+/*   for (int i = 1; i <= 5; i++) { */
+/*     printf("Top value is: %d.\n", *((int*)heap_top(&h))); */
+/*     printf("Value pop number %d is: %d.\n", i, *((int*)heap_pop(&h))); */
+/*   } */
+/*   heap_clear(&h); */
+/*   printf("Size is: %d.\n", (int)heap_size(&h)); */
+/* } */
+
+heap* make_heap() {
+  heap *h = (heap *)malloc(sizeof(heap));
+  heap_initialize(h);
+  return h;
+}
+
+void test_heap_initialize() {
+  heap *h  = make_heap();
+
+  assert(heap_size(h) == 0);
+}
+
+void test_heap_insert() {
+  heap *h = make_heap();
+
+  heap_insert(h, ONE, 10);
+
+  assert(heap_size(h) == 1);
+}
+
+void test_heap_top() {
+  heap *h = make_heap();
+
+  heap_insert(h, TWO, 2);
+  heap_insert(h, THREE, 3);
+  heap_insert(h, ONE, 1);
+
+  assert(heap_top(h) == THREE);
+}
+
+void test_heap_top_empty() {
+  heap *h = make_heap();
+
+  assert(heap_top(h) == NULL);
+}
+
+void test_heap_pop() {
+  heap *h = make_heap();
+  heap_insert(h, TWO, 2);
+  heap_insert(h, THREE, 3);
+  heap_insert(h, ONE, 1);
+
+  void *x = heap_pop(h);
+
+  assert(heap_size(h) == 2);
+  assert(x == THREE);
+}
+
+void test_heap_pop_empty() {
+  heap *h = make_heap();
+
+  void *x = heap_pop(h);
+
+  assert(x == NULL);
+}
+
+void test_heap_clear() {
+  heap *h = make_heap();
+  heap_insert(h, TWO, 2);
+  heap_insert(h, THREE, 3);
+  heap_insert(h, ONE, 1);
+
+  heap_clear(h);
+
+  assert(heap_size(h) == 0);
+  assert(heap_top(h) == NULL);
+}
+
+int main(int argc, char *argv[]) {
+  printf("\n");
+
+  run_test(test_heap_initialize);
+  run_test(test_heap_insert);
+  run_test(test_heap_top);
+  run_test(test_heap_top_empty);
+  run_test(test_heap_pop);
+  run_test(test_heap_pop_empty);
+  run_test(test_heap_clear);
+
+  return 0;
 }

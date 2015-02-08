@@ -59,7 +59,11 @@ size_t heap_size(heap* h) {
 
 // Return the top (maximal priority) value
 void* heap_top(heap* h) {
-  return h->root[0].value;
+  if (heap_size(h) > 0) {
+    return h->root[0].value;
+  } else {
+    return NULL;
+  }
 }
 
 // Insert value with priority into the heap
