@@ -28,11 +28,9 @@ size_t heap_size(heap* h) {
 }
 
 void* heap_top(heap* h) {
-  if (heap_size(h) > 0) {
-    return h->root[0].value;
-  } else {
-    return NULL;
-  }
+  if (h->size == 0) return NULL;
+
+  return h->root[0].value;
 }
 
 void heap_insert(heap* h, void* value, int priority) {
@@ -45,19 +43,17 @@ void heap_insert(heap* h, void* value, int priority) {
 }
 
 void* heap_pop(heap* h) {
-  if (h->size > 0) {
-    void* ptr = h->root[0].value;
-    h->alloc_size -= sizeof(node);
-    for (int i = 1; i < h->size; i++) {
-      h->root[i - 1] = h->root[i];
-    }
-    h->root = (node*)realloc(h->root, h->alloc_size);
-    h->size--;
-    heap_max_heapify(h);
-    return ptr;
-  } else {
-    return NULL;
+  if (h->size == 0) return NULL;
+
+  void* ptr = h->root[0].value;
+  h->alloc_size -= sizeof(node);
+  for (int i = 1; i < h->size; i++) {
+    h->root[i - 1] = h->root[i];
   }
+  h->root = (node*)realloc(h->root, h->alloc_size);
+  h->size--;
+  heap_max_heapify(h);
+  return ptr;
 }
 
 // Helper methods
