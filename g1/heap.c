@@ -58,18 +58,22 @@ void* heap_pop(heap* h) {
 
 // Helper methods
 
+// Get index of parent
 int heap_parent(int i) {
   return i / 2;
 }
 
+// Get index of left child
 int heap_left(int i) {
   return 2 * i;
 }
 
+// Get index of right child
 int heap_right(int i) {
   return 2 * i + 1;
 }
 
+// Rebuild max heap property
 void heap_max_heapify(heap* h) {
   for (int i = h->size - 1; i >= 0; --i) {
     if (heap_left(i) < h->size && h->root[heap_left(i)].priority > h->root[i].priority) {
