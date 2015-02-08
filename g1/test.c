@@ -53,14 +53,21 @@ void test_heap_top_empty() {
 
 void test_heap_pop() {
   heap *h = make_heap();
+  heap_insert(h, ONE, 1);
   heap_insert(h, TWO, 2);
   heap_insert(h, THREE, 3);
-  heap_insert(h, ONE, 1);
 
   void *x = heap_pop(h);
-
   assert(heap_size(h) == 2);
   assert(x == THREE);
+
+  void *y = heap_pop(h);
+  assert(heap_size(h) == 1);
+  assert(y == TWO);
+
+  void *z = heap_pop(h);
+  assert(heap_size(h) == 0);
+  assert(z == ONE);
 }
 
 void test_heap_pop_empty() {

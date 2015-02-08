@@ -11,6 +11,7 @@ typedef struct {
   /* You may want to allocate more
      space than strictly needed. */
   size_t alloc_size;
+  int heapified;
 } heap;
 
 int heap_parent(int);
