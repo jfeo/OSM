@@ -3,38 +3,13 @@
 #include "heap.h"
 
 // Return index of parent of node i
-int heap_parent(int i) {
-  return i / 2;
-}
-
+int heap_parent(int i);
 // Return index of left child of node i
-int heap_left(int i) {
-  return 2 * i;
-}
-
-
+int heap_left(int i);
 // Return index of right child of node i
-int heap_right(int i) {
-  return 2 * i + 1;
-}
-
+int heap_right(int i);
 // Preserve max heap property of heap
-void heap_max_heapify(heap* h) {
-  for (int i = h->size - 1; i >= 0; --i) {
-    if (heap_left(i) < h->size && h->root[heap_left(i)].priority > h->root[i].priority) {
-      node highest = h->root[heap_left(i)];
-      node lowest = h->root[i];
-      h->root[i] = highest;
-      h->root[heap_left(i)] = lowest;
-    }
-    if (heap_right(i) < h->size && h->root[heap_right(i)].priority > h->root[i].priority) {
-      node highest = h->root[heap_right(i)];
-      node lowest = h->root[i];
-      h->root[i] = highest;
-      h->root[heap_right(i)] = lowest;
-    } 
-  }
-}
+void heap_max_heapify(heap* h);
 
 // Initalize heap 
 void heap_initialize(heap* h) {
@@ -42,7 +17,6 @@ void heap_initialize(heap* h) {
   h->root = NULL;
   h->alloc_size = 0;
 }
-
 
 // Free memory and reset size variables
 void heap_clear(heap* h) {
@@ -92,3 +66,35 @@ void* heap_pop(heap* h) {
     return NULL;
   }
 }
+
+// Helper methods
+
+int heap_parent(int i) {
+  return i / 2;
+}
+
+int heap_left(int i) {
+  return 2 * i;
+}
+
+int heap_right(int i) {
+  return 2 * i + 1;
+}
+
+void heap_max_heapify(heap* h) {
+  for (int i = h->size - 1; i >= 0; --i) {
+    if (heap_left(i) < h->size && h->root[heap_left(i)].priority > h->root[i].priority) {
+      node highest = h->root[heap_left(i)];
+      node lowest = h->root[i];
+      h->root[i] = highest;
+      h->root[heap_left(i)] = lowest;
+    }
+    if (heap_right(i) < h->size && h->root[heap_right(i)].priority > h->root[i].priority) {
+      node highest = h->root[heap_right(i)];
+      node lowest = h->root[i];
+      h->root[i] = highest;
+      h->root[heap_right(i)] = lowest;
+    } 
+  }
+}
+
