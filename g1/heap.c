@@ -11,27 +11,22 @@ int heap_right(int i);
 // Preserve max heap property of heap
 void heap_max_heapify(heap* h);
 
-// Initalize heap 
 void heap_initialize(heap* h) {
   h->size = 0;
   h->root = NULL;
   h->alloc_size = 0;
 }
 
-// Free memory and reset size variables
 void heap_clear(heap* h) {
   free(h->root);
   h->size = 0;
   h->alloc_size = 0;
 }
 
-
-// Return the number of nodes in the heap
 size_t heap_size(heap* h) {
   return h->size;
 }
 
-// Return the top (maximal priority) value
 void* heap_top(heap* h) {
   if (heap_size(h) > 0) {
     return h->root[0].value;
@@ -40,7 +35,6 @@ void* heap_top(heap* h) {
   }
 }
 
-// Insert value with priority into the heap
 void heap_insert(heap* h, void* value, int priority) {
   node n = {value, priority};
   h->size++;
@@ -50,7 +44,6 @@ void heap_insert(heap* h, void* value, int priority) {
   heap_max_heapify(h);
 }
 
-// Pop top node off the heap and return value
 void* heap_pop(heap* h) {
   if (h->size > 0) {
     void* ptr = h->root[0].value;
@@ -97,4 +90,3 @@ void heap_max_heapify(heap* h) {
     } 
   }
 }
-
