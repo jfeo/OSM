@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include "heap.h"
 
 // Return index of parent of node i
@@ -41,6 +42,7 @@ void heap_insert(heap *h, void *value, int priority) {
   h->size++;
   h->alloc_size += sizeof(node);
   h->root = (node *)realloc(h->root, h->alloc_size);
+  assert(h->root != NULL);
   h->root[h->size - 1] = n;
   h->heapified = 0;
 }
@@ -55,6 +57,7 @@ void* heap_pop(heap *h) {
     h->root[i - 1] = h->root[i];
   }
   h->root = (node *)realloc(h->root, h->alloc_size);
+  assert(h->root != NULL);
   h->size--;
   h->heapified = 0;
   return ptr;

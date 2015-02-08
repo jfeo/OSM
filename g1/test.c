@@ -17,6 +17,7 @@ static void *THREE = (void *)3;
 // Helper function to create heap and initialize it
 heap* make_heap() {
   heap *h = (heap *)malloc(sizeof(heap));
+  assert(h != NULL);
   heap_initialize(h);
   return h;
 }
