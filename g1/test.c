@@ -88,6 +88,9 @@ void test_heap_clear() {
 
   assert(heap_size(h) == 0);
   assert(heap_top(h) == NULL);
+
+  heap_insert(h, ONE, 10);
+  assert(heap_top(h) == ONE);
 }
 
 int main(int argc, char *argv[]) {

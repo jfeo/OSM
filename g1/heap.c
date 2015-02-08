@@ -22,8 +22,7 @@ void heap_initialize(heap* h) {
 
 void heap_clear(heap* h) {
   free(h->root);
-  h->size = 0;
-  h->alloc_size = 0;
+  heap_initialize(h);
 }
 
 size_t heap_size(heap* h) {
