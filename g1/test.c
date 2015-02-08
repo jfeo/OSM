@@ -11,6 +11,7 @@ static void *ONE = (void *)1;
 static void *TWO = (void *)2;
 static void *THREE = (void *)3;
 
+// Helper function to create heap and initialize it
 heap* make_heap() {
   heap *h = (heap *)malloc(sizeof(heap));
   heap_initialize(h);
