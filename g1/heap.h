@@ -14,11 +14,6 @@ typedef struct {
   int heapified;
 } heap;
 
-int heap_parent(int);
-int heap_left(int);
-int heap_right(int);
-void heap_max_heapify(heap *);
-
 // Initalize heap 
 void heap_initialize(heap *);
 // Free memory and reset size variables
