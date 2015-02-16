@@ -35,12 +35,12 @@ void heap_heapify(heap* h, size_t i) {
 
   if(h->size > 1) {
     size_t left = heap_leftchild(h, i);
-    if(h->root[left].priority > parent->priority) {
+    if(left <= h->size && h->root[left].priority > parent->priority) {
       largest = left;
     }
     if(h->size > 2 ) {
       size_t right = heap_rightchild(h, i);
-      if(h->root[right].priority > h->root[largest].priority) {
+      if(right <= h->size && h->root[right].priority > h->root[largest].priority) {
         largest = right;
       }
     }

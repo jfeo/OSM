@@ -94,6 +94,17 @@ void test_heap_clear() {
   assert(heap_top(h) == ONE);
 }
 
+void test_heap_many() {
+  heap h;
+  
+  heap_initialize(&h);
+  int count = 2000;
+  for (int i = 1; i < count; ++i) {
+    heap_insert(&h, ONE, i);
+  }
+  assert(heap_size(&h) == count-1);
+}
+
 int main(int argc, char *argv[]) {
   printf("\n");
 
@@ -104,6 +115,7 @@ int main(int argc, char *argv[]) {
   run_test(test_heap_pop);
   run_test(test_heap_pop_empty);
   run_test(test_heap_clear);
+  run_test(test_heap_many);
 
   return 0;
 }
