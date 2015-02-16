@@ -75,8 +75,6 @@ void syscall_handle(context_t *user_context)
         void* buffer = (void*)user_context->cpu_regs[MIPS_REGISTER_A2];
         int bytes_read = 0;
 
-        kprintf("Please enter %d characters.\n", length_to_read);
-
         device_t* dev = device_get(YAMS_TYPECODE_TTY, 0);
         KERNEL_ASSERT(dev != NULL);
 
@@ -96,7 +94,6 @@ void syscall_handle(context_t *user_context)
     */
     case SYSCALL_WRITE:
     {
-        kprintf("You wrote: ");
         int length_to_write = user_context->cpu_regs[MIPS_REGISTER_A3];
         void* buffer = (void*)user_context->cpu_regs[MIPS_REGISTER_A2];
         int bytes_written = 0;
