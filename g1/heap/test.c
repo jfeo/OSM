@@ -98,7 +98,7 @@ void test_heap_many() {
   heap h;
   
   heap_initialize(&h);
-  int count = 2000;
+  int count = 99;
   for (int i = 1; i < count; ++i) {
     heap_insert(&h, ONE, i);
   }

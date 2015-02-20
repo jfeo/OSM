@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "assert.h"
 
-#define INIT_SIZE 1 // initial capacity of the heap
+#define INIT_SIZE 100 // initial capacity of the heap
 
 size_t heap_leftchild(heap* h, size_t i) {
   assert(h->size > 1 && i < h->size);
