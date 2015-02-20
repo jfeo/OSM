@@ -48,9 +48,25 @@ void process_start(const char *executable);
 
 #define PROCESS_MAX_PROCESSES 32
 
+typedef enum {
+  PCB_NEW,
+  PCB_READY,
+  PCB_TERMINATED,
+  PCB_WAITING,
+  PCB_RUNNING,
+} process_state_t;
+
 typedef struct {
-    /* STUB: Put something here. */
-    int dummy; /* Remove this. */
+  char *name;
+  process_id_t pid;
+  process_state_t state;
+  context_t *process_context;
+  /* CPU-scheduling information */
+  /* Memory-management information */
+  pagetable_t *pagetable;
+  /* Accounting information */
+  /* I/O status information */
+
 } process_control_block_t;
 
 /* Initialize the process table.  This must be called during kernel startup
