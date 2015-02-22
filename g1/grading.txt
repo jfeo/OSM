@@ -1,0 +1,36 @@
+# Task 1
+
+Good and clean code.
+
+Good observations regarding amortized running time and recursion in C.
+
+It was not the intention that `heap_clear' allocates a new heap; this way one
+can never free the resources used by a heap.
+
+It is wrong that O(lg n * lg n) = O(lg n).  A strategy not involving
+`heap_heapify' could achieve a better running time.
+
+You should note that your implementation only handles strictly positive
+priorities (because of your hack in `heap_pop').
+
+You should also be sure to test heap re-sizing.
+
+# Task 2
+
+As more syscalls are implemented you will probably want to move the
+implementations to separate functions.
+
+The two `while' loops does not belong in kernel space.  Rather you should just
+return whatever `gcd->read' and `gcd->write' returns and handle it in user
+space.  Consider what happens if EOF is encountered while reading (hint:
+infinite loop inside the kernel!).
+
+According to POSIX it is not an error if fewer bytes than requested is read or
+written.
+
+While the test does the job, it would be nice with something a little fancier,
+e.g. echoing characters back to the user as they are typed in.
+
+# Points
+
+You gain 3 of 3 points for G1.

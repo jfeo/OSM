@@ -1,0 +1,362 @@
+# General comments
+
+All groups has received this file.  The comments may or may not apply to you.
+
+# Extent and nature of written report
+
+Your report should be short.  The goal of the report is to help the reader
+(that's me) quickly understand what you did and how you did it.  For each task
+be sure to include:
+ - Which files you have created/changed (especially important for Buenos tasks).
+ - Whether the task was solved or not.  Something along the lines of "The task
+   was solved according to the requirements." is perfect.  However, if a task
+   was not solved or the solution has shortcomings this *must* be stated.
+ - A few words about testing: What is being tested and why?  Are the tests
+   successful?  If not, why?
+ - In cases of ambiguities you should state your interpretation.  In cases of
+   options you should argue your choices.
+
+# Programming style
+
+Different people tend to have different programming styles.  That's OK (as long
+as the style is reasonable).  What's important is that the style is followed
+consistently; It's much faster to read code if the style is consistent, much
+like proper punctuation can make a text easier on the eyes.
+
+Of course this means that you should adopt the same style within each group.
+
+Some (but not all!) things to pay attention to:
+ - Types and declarations:
+   o When writing pointer types do you put a space before the asterisk?
+   o Are your declarations formatted the same way as your definitions (your
+     function declarations are in your .h files and your function definitions
+     are in your .c files)?
+   o Do you declare your local variables as you go along or are they all
+     declared at the beginning of the function?  (Some C programmers --
+     especially those with big beards -- tend to like the latter better.)
+   o Do you declare and assign to your local variables on the same line?
+ - Whitespace:
+   o What is the longest line you can stand to look at?  (If it's more than 80
+     columns please say so in your report.)
+   o What do you do if a line becomes too long?  How do you break it?
+   o How do you indent your code?  Tabs or spaces (spaces!)?  How many?
+ - Structure:
+   o Do you use blank lines to structure your code?  If so, when?  (After each
+     loop?  Each conditional?)
+   o Do you use space after `if', `for', etc.?
+   o Where do you put your starting curly braces?  At the end of a line, or on a
+     new line?
+   o Would you rather use `switch' or a string of `else if'?
+ - Comment style:
+   o How much and what do you comment?
+   o Do you start your comments with capitals?  Do you end them with periods?
+   o How do you write a single line comment?
+   o How do you write a multi line comment?
+ - Debugging:
+   o Is a simple `printf' sufficient or do you use something fancier?
+
+# Idiomatic C programming:
+
+When programming C there are often more than one way to express the same thing.
+Sometimes one way is better than the rest.  Sometimes the choice is arbitrary.
+In the latter case there's usually a Proper Way^TM to do things.  You should
+strive to do things the Proper Way because it makes your code easier to read for
+seasoned C programmers (and since you will yourself soon be seasoned C
+programmers it's better to pick up on the Proper Ways of things sooner rather
+than later).
+
+In the examples below `p' is a pointer, `i' is an integer and `x', `y' are
+fields on a struct (which `p' might point to):
+
+  Never write...            Instead write...
+    *(p + i)                  p[i]
+    (p + i)                   &p[i]             [*]
+    (*p).x                    p->x
+    (*(*p).x).y               p->x->y
+    (*(p + i)).x              p[i].x
+    (p + i)->x                p[i].x
+    (*(*(p + i))).x           p[i]->x
+
+[*] Some people prefer this 'Never write...'-version, but they are wrong.
+
+# Memory allocation -- stack or heap
+
+Some of you have a tendency to favor the heap for memory allocation.  Most of
+the time the stack is preferable.  If know this but have trouble with the syntax
+you can skip to "Pointer syntax -- ampersand and asterisk" below.
+
+## When to use which
+
+In general the heap should only be used for
+ 1) Huge allocations
+ 2) Allocations that must survive across function calls
+
+The stack is used for local variables.  That is variables that have a lifetime
+from function start to function end.
+
+Lets look at an example: We write a function that takes a (C) string and
+converts lower case character to upper case ones.  Let's start with a helper
+function which modifies a string in this way:
+
+```
+  void upcase_help (char *str) {
+    int i;
+    char *c;
+    for (i = 0; str[i]; i++) {
+      c = &str[i];
+      if (*c >= 'a' && *c <= 'z') {
+        *c += 'A' - 'a';
+      }
+    }
+  }
+```
+
+Notice the use of a character pointer for `c'; it points to the character in the
+string that we are currently modifying.  This makes it possible to modify the
+string directly with `*c += ...'.
+
+### First wrong version
+
+At first we might be tempted to just write:
+
+```
+  char *upcase (char *str) {
+    upcase_help(str);
+    return str;
+  }
+```
+
+But this doesn't work.  Try this:
+
+```
+  void main (void) {
+    char *upcased;
+    upcased = upcase("Hello world");
+    puts(upcased);
+  }
+```
+
+You should see a segmentation fault.  This happens because your compiler places
+the string "Hello world" in read-only memory.  So when we try to modify it we
+get a permission violation.
+
+### Second wrong version
+
+OK, so we need to copy the argument string to read-write memory.  Let's try this:
+
+```
+  char *upcase (char *str) {
+    char str2[strlen(str) + 1];
+    strcpy(str2, str);
+    upcase_help(str2);
+    return str2;
+  }
+```
+
+But this doesn't work either.  Your compiler will probably even issue a warning
+that you're returning a local variable.  So what does that mean?  Broadly
+speaking virtual memory looks like this:
+
+```
+  \  high addrs \
+  /     ...     /
+  |-------------|
+  |             |
+  |    STACK    |
+  |             |
+  |-------------|
+  \             \
+  /  Unmapped   /
+  \   memory    \
+  /             /
+  |-------------|
+  |             |
+  |    HEAP     |
+  |             |
+  |-------------|
+  \     ...     \
+  /  low addrs  /
+```
+
+When a function is called it push its return address, its local variables, and
+registers that must be saved across the call on the stack.  When it calls
+another function arguments are also passed on the stack.  Broadly speaking,
+everything that is not allocated with `malloc' will live on the stack.  This
+explains why `upcase' doesn't work: it allocates space for the copy of `str' on
+the stack (within its *stack frame*).  But when the function returns this part
+of the stack may be used by other functions when they are called.  Since the
+copy of `str' should live on past the function call we must allocate space for
+it in the heap.
+
+### First correct version
+
+```
+  char *upcase (char *str) {
+    char *str2;
+    str2 = malloc(strlen(str) + 1);
+    strcpy(str2, str);
+    upcase_help(str2);
+    return str2;
+  }
+```
+
+In libc there exists a function to allocate space for and copy a string.  It's
+called `strdup':
+
+### Second correct version
+
+```
+  char *upcase (char *str) {
+    char *str2;
+    str2 = strdup(str);
+    upcase_help(str2);
+    return str2;
+  }
+```
+
+Of course we should remember to free the heap allocated string when we're done
+with it:
+
+```
+  void main (void) {
+    char *upcased;
+    upcased = upcase("Hello world");
+    puts(upcased);
+    free(upcased);
+  }
+```
+
+## Pointer syntax -- ampersand and asterisk
+
+Many of you have decided to allocate space for your `heap' structure in the heap
+when you test your implementation.  Since the heap you're testing is not huge
+and only used for the duration of the function call (most has a single `main'
+function in their test file) it should be allocated on the stack.  So what does
+each look like?
+
+### Allocating the heap structure in the heap
+
+```
+  int main (void) {
+    heap *h;
+    h = malloc(sizeof(heap));
+    ...
+    free(h);
+    return 0;
+  }
+```
+
+### Allocating the heap structure on the stack
+
+```
+  int main (void) {
+    heap h;
+    ...
+    return 0;
+  }
+```
+
+Notice that in the second case we do not need to free the structure since that
+happens implicitly when `main' finishes and gives back its part of the stack.
+
+The heap functions expect a pointer to a heap structure.  Let's see how
+`heap_initialize' is called:
+
+### Heap allocation
+
+```
+  int main (void) {
+    heap *h;
+    h = malloc(sizeof(heap));
+    heap_initialize(h);
+    ...
+    free(h);
+    return 0;
+  }
+```
+
+### Stack allocation
+
+```
+  int main (void) {
+    heap h;
+    heap_initialize(&h);
+    ...
+    return 0;
+  }
+```
+
+Since `malloc' returns a pointer to the allocated space, `h' is already a
+pointer in the first case.  In the second we have allocated the structure on the
+stack so `h' is not a pointer but rather the actual structure.  Therefore we
+need the ampersand to get its address.  The situation looks something like this:
+
+### Heap allocation
+
+```
+      |    STACK    |
+      |-------------| -.
+  .-- | heap *h     |  |
+  |   |             |   > main's stack frame
+  |   |             |  |
+  |   |-------------| -'
+  |   \             \
+  |   /  Unmapped   /
+  |   \   memory    \
+  |   /             /
+  |   |-------------|
+  '-> | heap {      |
+      |  root = ... |
+      |  size = ... |
+      |  alloc_size |
+      |    = ...    |
+      | }           |
+      |    HEAP     |
+```
+
+### Stack allocation
+
+```
+      |    STACK    |
+      |-------------| -.
+  .-> | heap h {    |  |
+  |   |  root = ... |  |
+  &h  |  size = ... |  |
+      |  alloc_size |   > main's stack frame
+      |    = ...    |  |
+      | }           |  |
+      |             |  |
+      |-------------| -'
+      \             \
+      /  Unmapped   /
+      \   memory    \
+      /             /
+      |-------------|
+      |    HEAP     |
+```
+
+In the first case `h' points to a heap structure.  In the second it's `&h'.  The
+structures are allocated different places but that shouldn't make a difference
+to `heap_initialize`.  This example should also make it clear why `heap_clear'
+must not call `free' on it's argument.
+
+### Asterisk and ampersand
+
+So to recap, asterisk (*) has two meanings:
+ 1) in type declarations it means "pointer to".  So `char *' means "pointer to a
+    character".
+ 2) in expressions it means de-reference, i.e. "follow pointer".  So `*c' means
+    "follow the pointer `c' and give me what it points to".
+
+Ampersand (&) always means "address of".  So `&foo' means "the address of
+`foo'".  The address of anything is always a pointer.
+
+## A note on recursion
+
+In general recursion is not used in C very often.  One reason is that each
+recursive call requires a stack frame.  This will quickly exhaust the stack.
+Instead a loop and an explicit stack of states is usually used.
+
+Recursion works brilliantly in your average functional language because the
+compiler is built to deal with that style of programming and so doesn't actually
+generate a recursive call in the machine code it outputs.
