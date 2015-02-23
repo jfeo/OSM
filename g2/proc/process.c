@@ -45,6 +45,7 @@
 #include "drivers/yams.h"
 #include "vm/vm.h"
 #include "vm/pagepool.h"
+#include "lib/libc.h"
 
 
 /** @name Process startup
@@ -70,6 +71,7 @@ spinlock_t process_table_slock;
  * process
  */
 void process_start(uint32_t pid) {
+    kprintf("Entering process start.\n");
     thread_table_t *process_thread;
     pagetable_t *pagetable;
     uint32_t phys_page;
@@ -255,7 +257,8 @@ process_id_t process_spawn(const char *executable) {
   /* */
  
   /* Create new thread */
-  thread_create(process_start, (uint32_t)pid);
+  TID_t process_thread = thread_create(process_start, (uint32_t)pid);
+  thread_run(process_thread);
 
   return pid;
 }
@@ -293,7 +296,7 @@ process_control_block_t *process_get_current_process_entry(void) {
     return &process_table[process_get_current_process()];
 }
 
-process_control_block_t *process_get_process_entry(process_id_t pid) {pid initprog_id = 
+process_control_block_t *process_get_process_entry(process_id_t pid) {
     return &process_table[pid];
 }
 
