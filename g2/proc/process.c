@@ -71,7 +71,7 @@ spinlock_t process_table_slock;
  * process
  */
 void process_start(uint32_t pid) {
-    kprintf("Entering process start.\n");
+    kprintf("Entering process start, pid: %d\n", pid);
     thread_table_t *process_thread;
     pagetable_t *pagetable;
     uint32_t phys_page;
@@ -106,6 +106,8 @@ void process_start(uint32_t pid) {
     /* Make sure the file existed and was a valid ELF file */
     KERNEL_ASSERT(file >= 0);
     KERNEL_ASSERT(elf_parse_header(&elf, file));
+
+    kprintf("Executable %s is valid\n", executable);
     
     /* Trivial and naive sanity check for entry point: */
     KERNEL_ASSERT(elf.entry_point >= PAGE_SIZE);
@@ -256,8 +258,9 @@ process_id_t process_spawn(const char *executable) {
 
   /* */
  
+  kprintf("Process spawn, creating thread for executable: %s\n", executable);
   /* Create new thread */
-  TID_t process_thread = thread_create(process_start, (uint32_t)pid);
+  TID_t process_thread = thread_create(&process_start, (uint32_t)pid);
   thread_run(process_thread);
 
   return pid;
