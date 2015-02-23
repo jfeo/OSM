@@ -38,6 +38,7 @@
 #define BUENOS_PROC_PROCESS
 
 #include "kernel/cswitch.h"
+#include "kernel/sleepq.h"
 #include "vm/pagetable.h"
 
 typedef int process_id_t;
