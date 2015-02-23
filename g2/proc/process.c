@@ -36,6 +36,7 @@
 
 #include "proc/process.h"
 #include "proc/elf.h"
+#include "kernel/spinlock.h"
 #include "kernel/thread.h"
 #include "kernel/assert.h"
 #include "kernel/interrupt.h"
@@ -53,6 +54,9 @@
 
 process_control_block_t process_table[PROCESS_MAX_PROCESSES];
 
+/* Spinlock which must be held when manipulating the process table */
+spinlock_t process_table_slock;
+
 /**
  * Starts one userland process. The thread calling this function will
  * be used to run the process and will therefore never return from
@@ -65,8 +69,8 @@ process_control_block_t process_table[PROCESS_MAX_PROCESSES];
  * @executable The name of the executable to be run in the userland
  * process
  */
-void process_start(const char *executable) {
-    thread_table_t *my_entry;
+void process_start(uint32_t pid) {
+    thread_table_t *process_thread;
     pagetable_t *pagetable;
     uint32_t phys_page;
     context_t user_context;
@@ -78,25 +82,29 @@ void process_start(const char *executable) {
 
     interrupt_status_t intr_status;
 
-    my_entry = thread_get_current_thread_entry();
+    process_thread = thread_get_current_thread_entry();
 
     /* If the pagetable of this thread is not NULL, we are trying to
        run a userland process for a second time in the same thread.
        This is not possible. */
-    KERNEL_ASSERT(my_entry->pagetable == NULL);
+    KERNEL_ASSERT(process_thread->pagetable == NULL);
 
     pagetable = vm_create_pagetable(thread_get_current_thread());
     KERNEL_ASSERT(pagetable != NULL);
 
     intr_status = _interrupt_disable();
-    my_entry->pagetable = pagetable;
+    process_thread->pagetable = pagetable;
     _interrupt_set_state(intr_status);
 
-    file = vfs_open((char *)executable);
+    /* Get executable name from pcb */
+    spinlock_acquire(&process_table_slock);
+    char *executable = (char *)process_table[pid].executable;
+    file = vfs_open(executable); spinlock_release(&process_table_slock);
+
     /* Make sure the file existed and was a valid ELF file */
     KERNEL_ASSERT(file >= 0);
     KERNEL_ASSERT(elf_parse_header(&elf, file));
-
+    
     /* Trivial and naive sanity check for entry point: */
     KERNEL_ASSERT(elf.entry_point >= PAGE_SIZE);
 
@@ -110,7 +118,7 @@ void process_start(const char *executable) {
     for(i = 0; i < CONFIG_USERLAND_STACK_SIZE; i++) {
         phys_page = pagepool_get_phys_page();
         KERNEL_ASSERT(phys_page != 0);
-        vm_map(my_entry->pagetable, phys_page, 
+        vm_map(process_thread->pagetable, phys_page, 
                (USERLAND_STACK_TOP & PAGE_SIZE_MASK) - i*PAGE_SIZE, 1);
     }
 
@@ -120,14 +128,14 @@ void process_start(const char *executable) {
     for(i = 0; i < (int)elf.ro_pages; i++) {
         phys_page = pagepool_get_phys_page();
         KERNEL_ASSERT(phys_page != 0);
-        vm_map(my_entry->pagetable, phys_page, 
+        vm_map(process_thread->pagetable, phys_page, 
                elf.ro_vaddr + i*PAGE_SIZE, 1);
     }
 
     for(i = 0; i < (int)elf.rw_pages; i++) {
         phys_page = pagepool_get_phys_page();
         KERNEL_ASSERT(phys_page != 0);
-        vm_map(my_entry->pagetable, phys_page, 
+        vm_map(process_thread->pagetable, phys_page, 
                elf.rw_vaddr + i*PAGE_SIZE, 1);
     }
 
@@ -135,7 +143,7 @@ void process_start(const char *executable) {
        pages fit into the TLB. After writing proper TLB exception
        handling this call should be skipped. */
     intr_status = _interrupt_disable();
-    tlb_fill(my_entry->pagetable);
+    tlb_fill(process_thread->pagetable);
     _interrupt_set_state(intr_status);
     
     /* Now we may use the virtual addresses of the segments. */
@@ -169,12 +177,12 @@ void process_start(const char *executable) {
 
     /* Set the dirty bit to zero (read-only) on read-only pages. */
     for(i = 0; i < (int)elf.ro_pages; i++) {
-        vm_set_dirty(my_entry->pagetable, elf.ro_vaddr + i*PAGE_SIZE, 0);
+        vm_set_dirty(process_thread->pagetable, elf.ro_vaddr + i*PAGE_SIZE, 0);
     }
 
     /* Insert page mappings again to TLB to take read-only bits into use */
     intr_status = _interrupt_disable();
-    tlb_fill(my_entry->pagetable);
+    tlb_fill(process_thread->pagetable);
     _interrupt_set_state(intr_status);
 
     /* Initialize the user context. (Status register is handled by
@@ -183,27 +191,92 @@ void process_start(const char *executable) {
     user_context.cpu_regs[MIPS_REGISTER_SP] = USERLAND_STACK_TOP;
     user_context.pc = elf.entry_point;
 
+    /* Set pcb state */
+    spinlock_acquire(&process_table_slock);
+    process_table[pid].state = PCB_RUNNING;
+    process_table[pid].user_context = &user_context;
+    
+    spinlock_release(&process_table_slock);
     thread_goto_userland(&user_context);
 
     KERNEL_PANIC("thread_goto_userland failed.");
 }
 
+void process_init(void) {
+  int i;
 
-void process_init() {
-    KERNEL_PANIC("Not implemented: process_init");
+  /* Init all entries to 'NULL' */
+  for (i = 0; i<PROCESS_MAX_PROCESSES; i++) {
+    process_table[i].executable = NULL;
+    process_table[i].state = PCB_FREE; 
+    process_table[i].user_context = NULL;
+    process_table[i].pagetable = NULL;
+  }
 }
 
 process_id_t process_spawn(const char *executable) {
-    executable = executable; /* Dummy */
-    KERNEL_PANIC("Not implemented: process_spawn");
-    return 0; /* Dummy */
+  static process_id_t next_pid = 0;
+  process_id_t i, pid = -1; 
+
+  /* mutual exclusion on the process table */
+  interrupt_status_t intr_status;
+
+  intr_status = _interrupt_disable();
+
+  spinlock_acquire(&process_table_slock);
+
+  /* Find the first free process table entry starting from 'next_pid' */
+  for (i=0; i<PROCESS_MAX_PROCESSES; i++) {
+    process_id_t p = (i + next_pid) % PROCESS_MAX_PROCESSES;
+
+    if (process_table[p].state == PCB_FREE) {
+      pid = p;
+      break;
+    }
+  }
+
+  /* Is the process table full? */
+  if (pid < 0) {
+    spinlock_release(&process_table_slock);
+    _interrupt_set_state(intr_status);
+    return pid;
+  }
+
+  next_pid = (pid+1) % PROCESS_MAX_PROCESSES;
+
+  /* Generate process control block */ 
+  process_table[pid].executable = executable;
+  process_table[pid].state = PCB_NEW; 
+
+  /* Release lock */
+  spinlock_release(&process_table_slock);
+  _interrupt_set_state(intr_status);
+
+  /* */
+ 
+  /* Create new thread */
+  thread_create(process_start, (uint32_t)pid);
+
+  return pid;
 }
 
 /* Stop the process and the thread it runs in.  Sets the return value as
    well. */
 void process_finish(int retval) {
-    retval = retval; /* Dummy */
-    KERNEL_PANIC("Not implemented: process_finish");
+  thread_table_t *process_thread;
+
+  /* Get process thread */
+  process_thread = thread_get_current_thread_entry();
+
+  /* Clean up virtual memory used by the process, as suggested */
+  vm_destroy_pagetable(process_thread->pagetable);
+  process_thread->pagetable=NULL;
+
+  spinlock_acquire(&process_table_slock);
+  process_table[process_thread->process_id].user_context->cpu_regs[MIPS_REGISTER_V0] = retval;
+  spinlock_release(&process_table_slock);
+
+  thread_finish();
 }
 
 int process_join(process_id_t pid) {
@@ -220,7 +293,7 @@ process_control_block_t *process_get_current_process_entry(void) {
     return &process_table[process_get_current_process()];
 }
 
-process_control_block_t *process_get_process_entry(process_id_t pid) {
+process_control_block_t *process_get_process_entry(process_id_t pid) {pid initprog_id = 
     return &process_table[pid];
 }
 

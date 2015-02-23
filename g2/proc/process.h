@@ -37,9 +37,12 @@
 #ifndef BUENOS_PROC_PROCESS
 #define BUENOS_PROC_PROCESS
 
+#include "kernel/cswitch.h"
+#include "vm/pagetable.h"
+
 typedef int process_id_t;
 
-void process_start(const char *executable);
+void process_start(uint32_t pid);
 
 #define USERLAND_STACK_TOP 0x7fffeffc
 
@@ -49,24 +52,24 @@ void process_start(const char *executable);
 #define PROCESS_MAX_PROCESSES 32
 
 typedef enum {
+  PCB_FREE,
   PCB_NEW,
+  PCB_RUNNING,
   PCB_READY,
   PCB_TERMINATED,
-  PCB_WAITING,
-  PCB_RUNNING,
+  PCB_WAITING
 } process_state_t;
 
 typedef struct {
-  char *name;
+  const char *executable;
   process_id_t pid;
   process_state_t state;
-  context_t *process_context;
+  context_t *user_context;
   /* CPU-scheduling information */
   /* Memory-management information */
   pagetable_t *pagetable;
   /* Accounting information */
   /* I/O status information */
-
 } process_control_block_t;
 
 /* Initialize the process table.  This must be called during kernel startup
