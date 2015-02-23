@@ -131,8 +131,8 @@ void init_startup_thread(uint32_t arg)
   }
 
   kprintf("Starting initial program '%s'\n", bootargs_get("initprog"));
-  process_spawn(bootargs_get("initprog"));
-
+  process_id_t pid = process_spawn(bootargs_get("initprog"));
+  process_join(pid);
   /* The current process_start() should never return. */
   KERNEL_PANIC("Run out of initprog.\n");
 }
