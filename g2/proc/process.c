@@ -40,6 +40,7 @@
 #include "kernel/thread.h"
 #include "kernel/assert.h"
 #include "kernel/interrupt.h"
+#include "kernel/sleepq.h"
 #include "kernel/config.h"
 #include "fs/vfs.h"
 #include "drivers/yams.h"
@@ -199,11 +200,12 @@ void process_start(uint32_t pid) {
   spinlock_acquire(&process_table_slock);
   process_table[pid].state = PCB_RUNNING;
   process_table[pid].user_context = &user_context;
-
   spinlock_release(&process_table_slock);
+
+  kprintf("PCB state initiated\n");
   thread_goto_userland(&user_context);
 
-  sleepq_wake((void*)pid);
+  // sleepq_wake((void*)pid);
 
   KERNEL_PANIC("thread_goto_userland failed.");
 }
@@ -262,10 +264,10 @@ process_id_t process_spawn(const char *executable) {
 
   /* */
 
-  kprintf("Process spawn, creating thread for executable: %s, tid: ", executable);
   /* Create new thread */
   TID_t process_thread = thread_create(&process_start, (uint32_t)pid);
   thread_run(process_thread);
+  kprintf("Process spawn, creating thread for executable: %s, thread id: %d\n", executable, process_thread);
   /* kprintf("%d\n", process_thread); */
 
   return pid;
@@ -284,26 +286,32 @@ void process_finish(int retval) {
   process_thread->pagetable=NULL;
 
   spinlock_acquire(&process_table_slock);
-  process_table[process_thread->process_id].user_context->cpu_regs[MIPS_REGISTER_V0] = retval;
+  process_control_block_t *pcb = &process_table[process_thread->process_id];
+  pcb->user_context->cpu_regs[MIPS_REGISTER_V0] = retval;
+  pcb->state = PCB_FREE;
   spinlock_release(&process_table_slock);
 
   thread_finish();
 }
 
 int process_join(process_id_t pid) {
-  interrupt_status_t intr_status;
   int retval; 
   
-  intr_status = _interrupt_disable();
-  _interrupt_set_state(intr_status);
-
-  sleepq_add((void*)pid);
+  _interrupt_disable();
 
   spinlock_acquire(&process_table_slock);
+  process_control_block_t *pcb = &process_table[pid];
+  kprintf("Waiting...\n");
+  while(pcb->state == PCB_RUNNING) {
+    sleepq_add((void*)pid);
+    spinlock_release(&process_table_slock);
+    thread_switch();
+    spinlock_acquire(&process_table_slock);
+  }
   retval = process_table[pid].user_context->cpu_regs[MIPS_REGISTER_V0];
   spinlock_release(&process_table_slock);
 
-  _interrupt_set_state(intr_status);
+  _interrupt_enable();
 
   return retval;
 }
