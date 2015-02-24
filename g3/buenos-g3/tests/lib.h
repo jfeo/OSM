@@ -39,6 +39,7 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+#include "sem.h"
 #include "lib/types.h"
 
 /* Filehandles for input and output */
@@ -75,9 +76,15 @@ int syscall_write(int filehandle, const void *buffer, int length);
 int syscall_create(const char *filename, int size);
 int syscall_delete(const char *filename);
 
+
 int syscall_fork(void (*func)(int), int arg);
 void *syscall_memlimit(void *heap_end);
 
+/* Userland semaphores */
+usr_sem_t *syscall_sem_open(char const* name, int value);
+int syscall_sem_p(usr_sem_t *handle);
+int syscall_sem_v(usr_sem_t *handle);
+int syscall_sem_destroy(usr_sem_t *handle);
 
 /* The following functions and macros are not system calls, but convenient
    library functions and macros inspired by POSIX and the C standard library. */

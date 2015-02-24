@@ -187,6 +187,23 @@ int syscall_delete(const char *filename)
 /* The following functions are not system calls, but convenient
    library functions inspired by POSIX and the C standard library. */
 
+/* Userland semaphores */
+usr_sem_t *syscall_sem_open(char const* name, int value) {
+  return (usr_sem_t*)_syscall(SYSCALL_SEM_OPEN, (uint32_t)name,
+      (uint32_t)value, 0);
+}
+
+int syscall_sem_p(usr_sem_t *handle) {
+  return (int)_syscall(SYSCALL_SEM_PROCURE, (uint32_t)handle, 0, 0);
+}
+
+int syscall_sem_v(usr_sem_t *handle) {
+  return (int)_syscall(SYSCALL_SEM_VACATE, (uint32_t)handle, 0, 0);
+}
+
+/* int syscall_sem_destroy(usr_sem_t *handle); */
+
+
 #ifdef PROVIDE_STRING_FUNCTIONS
 
 /* Return the length of the string pointed to by s. */
