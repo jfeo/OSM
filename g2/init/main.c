@@ -132,9 +132,10 @@ void init_startup_thread(uint32_t arg)
 
   kprintf("Starting initial program '%s'\n", bootargs_get("initprog"));
   process_id_t pid = process_spawn(bootargs_get("initprog"));
+  kprintf("Initial program '%s' started, waiting for it to finish\n", bootargs_get("initprog"));
   process_join(pid);
   /* The current process_start() should never return. */
-  KERNEL_PANIC("Run out of initprog.\n");
+  KERNEL_PANIC("Init prog finished. Success?\n");
 }
 
 /* Whether other processors than 0 may continue in SMP mode.

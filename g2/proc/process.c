@@ -86,6 +86,7 @@ void process_start(uint32_t pid) {
   interrupt_status_t intr_status;
 
   process_thread = thread_get_current_thread_entry();
+  process_thread->process_id = pid;
 
   /* If the pagetable of this thread is not NULL, we are trying to
      run a userland process for a second time in the same thread.
@@ -100,9 +101,10 @@ void process_start(uint32_t pid) {
   _interrupt_set_state(intr_status);
 
   /* Get executable name from pcb */
-  spinlock_acquire(&process_table_slock);
+  //spinlock_acquire(&process_table_slock);
   char *executable = (char *)process_table[pid].executable;
-  file = vfs_open(executable); spinlock_release(&process_table_slock);
+  file = vfs_open("[disk]dummyprog\0");
+  //spinlock_release(&process_table_slock);
 
   /* Make sure the file existed and was a valid ELF file */
   KERNEL_ASSERT(file >= 0);
@@ -202,11 +204,9 @@ void process_start(uint32_t pid) {
   process_table[pid].user_context = &user_context;
   spinlock_release(&process_table_slock);
 
-  kprintf("PCB state initiated\n");
+  kprintf("PCB state RUNNING\n");
+
   thread_goto_userland(&user_context);
-
-  // sleepq_wake((void*)pid);
-
   KERNEL_PANIC("thread_goto_userland failed.");
 }
 
@@ -258,17 +258,18 @@ process_id_t process_spawn(const char *executable) {
   process_table[pid].executable = executable;
   process_table[pid].state = PCB_NEW; 
 
+
+  /* */
   /* Release lock */
   spinlock_release(&process_table_slock);
   _interrupt_set_state(intr_status);
 
-  /* */
-
+  kprintf("Creating thread for pid: %d\n", pid);
   /* Create new thread */
   TID_t process_thread = thread_create(&process_start, (uint32_t)pid);
   thread_run(process_thread);
+
   kprintf("Process spawn, creating thread for executable: %s, thread id: %d\n", executable, process_thread);
-  /* kprintf("%d\n", process_thread); */
 
   return pid;
 }
@@ -276,10 +277,12 @@ process_id_t process_spawn(const char *executable) {
 /* Stop the process and the thread it runs in.  Sets the return value as
    well. */
 void process_finish(int retval) {
+  kprintf("Process about to finish..\n");
   thread_table_t *process_thread;
 
   /* Get process thread */
   process_thread = thread_get_current_thread_entry();
+
 
   /* Clean up virtual memory used by the process, as suggested */
   vm_destroy_pagetable(process_thread->pagetable);
@@ -288,30 +291,33 @@ void process_finish(int retval) {
   spinlock_acquire(&process_table_slock);
   process_control_block_t *pcb = &process_table[process_thread->process_id];
   pcb->user_context->cpu_regs[MIPS_REGISTER_V0] = retval;
-  pcb->state = PCB_FREE;
+  pcb->state = PCB_TERMINATED;
   spinlock_release(&process_table_slock);
 
+  kprintf("Process finished, pid: %d\n", process_thread->process_id);
   thread_finish();
 }
 
 int process_join(process_id_t pid) {
   int retval; 
-  
-  _interrupt_disable();
+  interrupt_status_t intr_state;
+  intr_state = _interrupt_disable();
+
 
   spinlock_acquire(&process_table_slock);
   process_control_block_t *pcb = &process_table[pid];
   kprintf("Waiting...\n");
-  while(pcb->state == PCB_RUNNING) {
+  while(pcb->state != PCB_TERMINATED) {
     sleepq_add((void*)pid);
     spinlock_release(&process_table_slock);
     thread_switch();
     spinlock_acquire(&process_table_slock);
   }
+  kprintf("Done waiting\n");
   retval = process_table[pid].user_context->cpu_regs[MIPS_REGISTER_V0];
   spinlock_release(&process_table_slock);
 
-  _interrupt_enable();
+  _interrupt_set_state(intr_state);
 
   return retval;
 }
