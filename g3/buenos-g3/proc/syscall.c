@@ -49,6 +49,15 @@
 #define A3 user_context->cpu_regs[MIPS_REGISTER_A3]
 #define V0 user_context->cpu_regs[MIPS_REGISTER_V0]
 
+#define SEM_NAME_MAX_LENGTH 30
+
+typedef void* usr_sem_t;
+
+typedef struct usr_sem_table_t {
+    char name[SEM_NAME_MAX_LENGTH];
+    usr_sem_t *handle;
+} usr_sem_table_t;
+
 gcd_t* get_tty() {
     device_t *dev;
     gcd_t *gcd;
@@ -87,6 +96,31 @@ int syscall_join(process_id_t pid) {
     return process_join(pid);
 }
 
+ usr_sem_t* syscall_sem_open(char const* name, int value) {
+    // TODO:
+    name = name;
+    value = value;
+    return NULL;
+ }
+
+ int syscall_sem_p(usr_sem_t* handle) {
+    // TODO
+    handle=handle; /* dummy */
+    return 0;
+ }
+
+ int syscall_sem_v(usr_sem_t* handle) {
+    // TODO
+    handle=handle; /* dummy */
+    return 0;
+ }
+
+ int syscall_sem_destroy(usr_sem_t* handle) {
+    // TODO
+    handle=handle; /* dummy */
+    return 0;
+ }
+
 /**
  * Handle system calls. Interrupts are enabled when this function is
  * called.
@@ -123,6 +157,15 @@ void syscall_handle(context_t *user_context)
         break;
     case SYSCALL_JOIN:
         V0 = syscall_join((process_id_t) A1);
+        break;
+    case SYSCALL_SEM_OPEN:
+        
+        break;
+    case SYSCALL_SEM_PROCURE:
+        
+        break;
+    case SYSCALL_SEM_VACATE:
+        
         break;
     default:
         KERNEL_PANIC("Unhandled system call\n");
