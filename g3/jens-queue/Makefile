@@ -1,4 +1,4 @@
-CC := gcc -g -std=c99
+CC := gcc -g -std=c99 -pthread
 SOURCES := queue.c test.c
 TARGET  := queue
 

@@ -4,41 +4,69 @@
 
 #include "queue.h"
 
-char *success(int res) {
-  if (res == 0)
-    return "Failure!";
-  else
-    return "Success!";
-}
-
 // Macro for printing name of function
 // and then running it
 #define run_test(fn_name)\
-  printf("Testing: %s. %s\n", #fn_name, success(fn_name()));\
+  printf("OK: %s\n", #fn_name);\
+  fn_name();
 
-int test_queue_put(void) {
+static void *one = (void *)1;
+static void *two = (void *)2;
+static void *three = (void *)3;
+
+void test_queue_basic_put_get() {
   queue_t q;
-  
   queue_init(&q);
 
-  int vals[] = {42, 24, 12};
+  queue_put(&q, one);
+  queue_put(&q, two);
+  queue_put(&q, three);
 
-  queue_put(&q, &vals[0]);
-  queue_put(&q, &vals[1]);
-  queue_put(&q, &vals[2]);
-  
-  if (*(int*)q.head->next->item != 42)
-    return 0;
-  if (*(int*)q.head->next->next->item != 24)
-    return 0;
-  if (*(int*)q.head->next->next->next->item != 12)
-    return 0;    
+  assert(queue_get(&q) == one);
+  assert(queue_get(&q) == two);
+  assert(queue_get(&q) == three);
+}
 
-  return 1;
+queue_t shared_q;
+
+void* consumer(void *_) {
+  for (int i = 0; i < 20; ++i) {
+    for (int j = 0; j < 10000; ++j);
+
+    int *x = queue_get(&shared_q);
+    if (x != NULL) {
+      printf("consumer: %i\n", *x);
+    }
+  }
+}
+
+void* producer(void *_) {
+  for (int i = 0; i < 20; ++i) {
+    for (int j = 0; j < 10000; ++j);
+
+    int x = i + 1 - 1;
+    queue_put(&shared_q, &x);
+    printf("producer: %i\n", x);
+  }
+}
+
+void test_queue_concurrently() {
+  queue_init(&shared_q);
+  pthread_t producer_thread;
+  pthread_t consumer_thread;
+
+  pthread_create(&producer_thread, NULL, &producer, NULL);
+  pthread_create(&consumer_thread, NULL, &consumer, NULL);
+
+  pthread_join(producer_thread, NULL);
+  pthread_join(consumer_thread, NULL);
 }
 
 int main(int argc, char **argv) {
-  run_test(test_queue_put);
+  printf("\n");
 
-	return 0;
+  run_test(test_queue_basic_put_get);
+  run_test(test_queue_concurrently);
+
+  return 0;
 }
