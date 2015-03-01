@@ -44,8 +44,11 @@ void* producer(void *_) {
   for (int i = 0; i < 20; ++i) {
     for (int j = 0; j < 10000; ++j);
 
-    queue_put(&shared_q, &i);
-    printf("producer: %i\n", i);
+    int *a = (int *)malloc(sizeof(int));
+    *a = i;
+
+    queue_put(&shared_q, a);
+    printf("producer: %i\n", a);
   }
 }
 
