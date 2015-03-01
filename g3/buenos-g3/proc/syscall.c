@@ -193,10 +193,10 @@ void syscall_handle(context_t *user_context)
         V0 = (int)syscall_sem_open((char*) A1, (int) A2);
         break;
     case SYSCALL_SEM_PROCURE:
-        V0 = syscall_sem_p((void*) A0);
+        V0 = syscall_sem_p((void*) A1);
         break;
     case SYSCALL_SEM_VACATE:
-        V0 = syscall_sem_v((void*) A0);
+        V0 = syscall_sem_v((void*) A1);
         break;
     default:
         KERNEL_PANIC("Unhandled system call\n");
