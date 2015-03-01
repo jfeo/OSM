@@ -42,6 +42,16 @@
 #include "kernel/assert.h"
 #include "drivers/device.h"
 #include "drivers/gcd.h"
+#include "lib/libc.h"
+#include "kernel/semaphore.h"
+
+#define MAX_SEMAPHORES 32
+#define SEM_NAME_MAX_LENGTH 30
+
+typedef struct usr_sem_t {
+    char name[SEM_NAME_MAX_LENGTH];
+    semaphore_t *kernel_handle;
+} usr_sem_t;
 
 #define A0 user_context->cpu_regs[MIPS_REGISTER_A0]
 #define A1 user_context->cpu_regs[MIPS_REGISTER_A1]
@@ -49,14 +59,7 @@
 #define A3 user_context->cpu_regs[MIPS_REGISTER_A3]
 #define V0 user_context->cpu_regs[MIPS_REGISTER_V0]
 
-#define SEM_NAME_MAX_LENGTH 30
-
-typedef void* usr_sem_t;
-
-typedef struct usr_sem_table_t {
-    char name[SEM_NAME_MAX_LENGTH];
-    usr_sem_t *handle;
-} usr_sem_table_t;
+usr_sem_t usr_sem_table[MAX_SEMAPHORES];
 
 gcd_t* get_tty() {
     device_t *dev;
@@ -96,28 +99,57 @@ int syscall_join(process_id_t pid) {
     return process_join(pid);
 }
 
- usr_sem_t* syscall_sem_open(char const* name, int value) {
-    // TODO:
-    name = name;
-    value = value;
-    return NULL;
- }
+void usr_sem_init() {
+    int i;
+    for (i = 0; i < MAX_SEMAPHORES; ++i) {
+        usr_sem_table[i].name[0] = '\0';
+    }
+}
 
- int syscall_sem_p(usr_sem_t* handle) {
-    // TODO
-    handle=handle; /* dummy */
+usr_sem_t* syscall_sem_open(char const* name, int value) {
+    usr_sem_t *ret = NULL;
+    int i;
+    for (i = 0; i < MAX_SEMAPHORES; ++i) {
+        if(stringcmp(usr_sem_table[i].name, name) == 0) {
+            ret = &usr_sem_table[i]; // found existing
+        }
+    }
+    kprintf("Semaphore %s exists: %d\n", name, ret != NULL);
+    kprintf("Value is %d\n", value);
+    if(value >= 0) {
+        if(ret != NULL) {
+            return NULL; // error, already exists
+        }
+        // create fresh
+        semaphore_t *handle = semaphore_create(value);
+        usr_sem_t new;
+        stringcopy(new.name, name, SEM_NAME_MAX_LENGTH);
+        new.kernel_handle = handle;
+        for (i = 0; i < MAX_SEMAPHORES; ++i) {
+            if(usr_sem_table[i].name[0] == '\0') {
+                usr_sem_table[i] = new; // found existing
+            }
+        }
+        ret = &usr_sem_table[i];
+    }
+    return ret;
+}
+
+int syscall_sem_p(usr_sem_t* handle) {
+    KERNEL_ASSERT(handle != NULL);
+    semaphore_P(handle->kernel_handle);
     return 0;
- }
+}
 
  int syscall_sem_v(usr_sem_t* handle) {
-    // TODO
-    handle=handle; /* dummy */
+    KERNEL_ASSERT(handle != NULL);
+    semaphore_V(handle->kernel_handle);
     return 0;
  }
 
  int syscall_sem_destroy(usr_sem_t* handle) {
-    // TODO
-    handle=handle; /* dummy */
+    KERNEL_ASSERT(handle != NULL);
+    semaphore_destroy(handle->kernel_handle);
     return 0;
  }
 
@@ -159,13 +191,13 @@ void syscall_handle(context_t *user_context)
         V0 = syscall_join((process_id_t) A1);
         break;
     case SYSCALL_SEM_OPEN:
-        
+        V0 = (int)syscall_sem_open((char*) A1, (int) A2);
         break;
     case SYSCALL_SEM_PROCURE:
-        
+        V0 = syscall_sem_p((void*) A0);
         break;
     case SYSCALL_SEM_VACATE:
-        
+        V0 = syscall_sem_v((void*) A0);
         break;
     default:
         KERNEL_PANIC("Unhandled system call\n");

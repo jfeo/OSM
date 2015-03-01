@@ -39,7 +39,6 @@
 
 #include <stdarg.h>
 #include <stddef.h>
-#include "sem.h"
 #include "lib/types.h"
 
 /* Filehandles for input and output */

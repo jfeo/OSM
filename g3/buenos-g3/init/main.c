@@ -57,6 +57,8 @@
 #include "proc/process.h"
 #include "vm/vm.h"
 
+void usr_sem_init(void);
+
 /**
  * Fallback function for system startup. This function is executed
  * if the initial startup program (shell or other userland process given
@@ -222,6 +224,9 @@ void init(void)
 
     kwrite("Initializing virtual memory\n");
     vm_init();
+
+    kwrite("Initializing user semaphores\n");
+    usr_sem_init();
 
     kprintf("Creating initialization thread\n");
     startup_thread = thread_create(&init_startup_thread, 0);
