@@ -6,7 +6,8 @@ typedef struct node {
 } node_t;
 
 typedef struct queue {
-  pthread_mutex_t mutex;
+  pthread_mutex_t head_mtx;
+  pthread_mutex_t tail_mtx;
   pthread_cond_t cond;
   pthread_mutexattr_t attr;
   node_t *head;
