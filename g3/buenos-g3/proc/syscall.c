@@ -125,7 +125,7 @@ usr_sem_t* syscall_sem_open(char const* name, int value) {
         new.kernel_handle = handle;
         for (i = 0; i < MAX_SEMAPHORES; ++i) {
             if(usr_sem_table[i].name[0] == '\0') {
-                usr_sem_table[i] = new; // found existing
+                usr_sem_table[i] = new; // found available spot
                 break;
             }
         }
