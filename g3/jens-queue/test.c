@@ -44,22 +44,37 @@ void* producer(void *_) {
   for (int i = 0; i < 20; ++i) {
     for (int j = 0; j < 10000; ++j);
 
-    int x = i + 1 - 1;
-    queue_put(&shared_q, &x);
-    printf("producer: %i\n", x);
+    int *a = (int *)malloc(sizeof(int));
+    *a = i;
+
+    queue_put(&shared_q, a);
+    printf("producer: %i\n", a);
   }
 }
 
 void test_queue_concurrently() {
   queue_init(&shared_q);
-  pthread_t producer_thread;
-  pthread_t consumer_thread;
 
-  pthread_create(&producer_thread, NULL, &producer, NULL);
-  pthread_create(&consumer_thread, NULL, &consumer, NULL);
+  int count = 10;
 
-  pthread_join(producer_thread, NULL);
-  pthread_join(consumer_thread, NULL);
+  pthread_t producers[count];
+  pthread_t consumers[count];
+
+  for (int i = 0; i < count; ++i) {
+    pthread_t p;
+    pthread_t c;
+
+    pthread_create(&p, NULL, &producer, NULL);
+    pthread_create(&c, NULL, &consumer, NULL);
+
+    producers[i] = p;
+    consumers[i] = c;
+  }
+
+  for (int i = 0; i < count; ++i) {
+    pthread_join(producers[i], NULL);
+    pthread_join(consumers[i], NULL);
+  }
 }
 
 int main(int argc, char **argv) {
