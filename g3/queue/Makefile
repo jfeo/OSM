@@ -1,18 +1,15 @@
-.PHONY: clean run
+CC := gcc -g -std=c99 -pthread
+SOURCES := queue.c test.c
+TARGET  := queue
 
-CC=gcc
-CFLAGS=-Wall -pedantic -std=c99 -pthread -fdiagnostics-color=always
-SOURCES=queue.c test.c
-EXECUTABLE=queuetest
+.PHONY: all clean
 
-default: $(EXECUTABLE)
-
-$(EXECUTABLE): $(SOURCES)
-	$(CC) $(CFLAGS) -o $(EXECUTABLE) $(SOURCES)
-	./$(EXECUTABLE)
-
-run: $(EXECUTABLE)
-	./$(EXECUTABLE)
+all: clean $(TARGET)
+	./$(TARGET)
 
 clean:
-	rm -rf $(EXECUTABLE)
+	rm -f $(TARGET)
+
+$(TARGET): $(SOURCES)
+	$(CC) -o $(TARGET) $(SOURCES)
+

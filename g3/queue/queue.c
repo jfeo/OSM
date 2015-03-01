@@ -1,89 +1,89 @@
-#include "queue.h"
+#include <error.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
-#include <pthread.h>
 
-static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+#include "queue.h"
 
-struct Queue {
-  void *head;
-  Queue *tail;
-};
+void queue_init(queue_t *q) {
+  // Using attr here makes it crash
+  if (pthread_mutex_init(&q->head_mtx, NULL) != 0) {
+    perror("mutex init failed");
+    exit(EXIT_FAILURE);
+  }
 
-Queue* queue_create() {
-  Queue *q = malloc(sizeof(Queue));
-  q->head = NULL;
-  q->tail = NULL;
-  return q;
+  if (pthread_mutex_init(&q->tail_mtx, NULL) != 0) {
+    perror("mutex init failed");
+    exit(EXIT_FAILURE);
+  }
+
+  node_t *new = malloc(sizeof(node_t));
+  if (new == NULL) {
+    perror("malloc failed");
+    exit(EXIT_FAILURE);
+  }
+
+  new->next = NULL;
+  q->head = q->tail = new;
 }
 
-size_t queue_size(Queue *q) {
-  size_t result = 0;
+void queue_put(queue_t *q, void *item) {
+  /* lock the queue mutex */
+  if (pthread_mutex_lock(&q->tail_mtx) != 0) {
+    perror("mutex lock failed");
+    exit(EXIT_FAILURE);
+  }
 
-  if (q->head == NULL) result = 0;
-  else if (q->tail == NULL) result = 1;
-  else {
-    Queue *current = q;
-    result++;
-    while (current->tail != NULL) {
-      result++;
-      current = current->tail;
+  node_t *new = malloc(sizeof(node_t));
+  if (new == NULL) {
+    perror("malloc failed");
+    exit(EXIT_FAILURE);
+  }
+
+  new->item = item;
+  new->next = NULL;
+
+  /* add the new node to the tail */
+  q->tail->next = new;
+  q->tail = new;
+
+  /* unlock the queue mutex */
+  if (pthread_mutex_unlock(&q->tail_mtx) != 0) {
+    perror("mutex unlock failed");
+    exit(EXIT_FAILURE);
+  }
+}
+
+void *queue_get(queue_t *q) {
+  /* lock the queue mutex */
+  if (pthread_mutex_lock(&q->head_mtx) != 0) {
+    perror("mutex lock failed");
+    exit(EXIT_FAILURE);
+  }
+
+  node_t *old = q->head;
+
+  /* note that the head contains a 'dummy' node. That's why we test
+   * old->next. */
+  if (old->next == NULL) {
+    if (pthread_mutex_unlock(&q->head_mtx) != 0) {
+      perror("mutex unlock failed");
+      exit(EXIT_FAILURE);
     }
+
+    return NULL; /* queue was empty */
   }
 
-  return result;
+  void *item = old->next->item;
 
-  /* Recursive implementation */
-  /* if (q->head == NULL) return 0; */
-  /* if (q->tail == NULL) return 1; */
-  /* return 1 + queue_size(q->tail); */
-}
+  /* update the head and free the old memory */
+  q->head = old->next;
+  free(old);
 
-void queue_push(Queue *q, void *x) {
-  pthread_mutex_lock(&mtx);
-  if (q->head == NULL) {
-    q->head = x;
-  } else {
-    Queue *current = q;
-    while (current->tail != NULL) {
-      current = current->tail;
-    }
-    Queue *p = queue_create();
-    p->head = x;
-    current->tail = p;
+  /* unlock the queue mutex */
+  if (pthread_mutex_unlock(&q->head_mtx) != 0) {
+    perror("mutex unlock failed");
+    exit(EXIT_FAILURE);
   }
-  pthread_mutex_unlock(&mtx);
 
-  /* Recursive implementation */
-  /* if (q->head == NULL) { */
-  /*   q->head = x; */
-  /* } else if (q->tail == NULL) { */
-  /*   Queue *p = queue_create(); */
-  /*   p->head = x; */
-  /*   q->tail = p; */
-  /* } else { */
-  /*   queue_push(q->tail, x); */
-  /* } */
-}
-
-void* queue_pop(Queue *q) {
-  assert(q->head != NULL);
-
-  void *result = q->head;
-
-  pthread_mutex_lock(&mtx);
-  if (q->tail == NULL) {
-    Queue *p = queue_create();
-    *q = *(p);
-  } else {
-    *q = *(q->tail);
-  }
-  pthread_mutex_unlock(&mtx);
-
-  return result;
-}
-
-int queue_empty(Queue *q) {
-  return queue_size(q) == 0;
+  return item;
 }

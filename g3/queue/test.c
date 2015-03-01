@@ -1,108 +1,87 @@
-#include <stdio.h>
 #include <assert.h>
-#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "queue.h"
 
+// Macro for printing name of function
+// and then running it
 #define run_test(fn_name)\
   printf("OK: %s\n", #fn_name);\
   fn_name();
 
-// Dummy pointers used for testing
-static void *ONE = (void *)1;
-static void *TWO = (void *)2;
-static void *THREE = (void *)3;
+static void *one = (void *)1;
+static void *two = (void *)2;
+static void *three = (void *)3;
 
-void test_creating_empty_queue() {
-  Queue *q = queue_create();
-  assert(0 == queue_size(q));
+void test_queue_basic_put_get() {
+  queue_t q;
+  queue_init(&q);
+
+  queue_put(&q, one);
+  queue_put(&q, two);
+  queue_put(&q, three);
+
+  assert(queue_get(&q) == one);
+  assert(queue_get(&q) == two);
+  assert(queue_get(&q) == three);
 }
 
-void test_push() {
-  Queue *q = queue_create();
+queue_t shared_q;
 
-  queue_push(q, ONE);
-  queue_push(q, TWO);
-  queue_push(q, THREE);
+void* consumer(void *_) {
+  for (int i = 0; i < 20; ++i) {
+    for (int j = 0; j < 10000; ++j);
 
-  assert(3 == queue_size(q));
+    int *x = queue_get(&shared_q);
+    if (x != NULL) {
+      printf("consumer: %i\n", *x);
+    }
+  }
 }
 
-void test_pop() {
-  Queue *q = queue_create();
-  queue_push(q, ONE);
+void* producer(void *_) {
+  for (int i = 0; i < 20; ++i) {
+    for (int j = 0; j < 10000; ++j);
 
-  assert(ONE == queue_pop(q));
+    int *a = (int *)malloc(sizeof(int));
+    *a = i;
+
+    queue_put(&shared_q, a);
+    printf("producer: %i\n", a);
+  }
 }
 
-void test_push_and_pop_more_things() {
-  Queue *q = queue_create();
-  queue_push(q, ONE);
-  queue_push(q, TWO);
-  queue_push(q, THREE);
+void test_queue_concurrently() {
+  queue_init(&shared_q);
 
-  assert(3 == queue_size(q));
-  assert(ONE == queue_pop(q));
+  int count = 10;
 
-  assert(2 == queue_size(q));
-  assert(TWO == queue_pop(q));
+  pthread_t producers[count];
+  pthread_t consumers[count];
 
-  assert(1 == queue_size(q));
-  assert(THREE == queue_pop(q));
+  for (int i = 0; i < count; ++i) {
+    pthread_t p;
+    pthread_t c;
 
-  assert(0 == queue_size(q));
-}
+    pthread_create(&p, NULL, &producer, NULL);
+    pthread_create(&c, NULL, &consumer, NULL);
 
-void test_queue_empty() {
-  Queue *q = queue_create();
-  assert(queue_empty(q));
-  queue_push(q, ONE);
-  assert(!queue_empty(q));
-}
-
-static Queue *shared_queue;
-static void *results[3];
-
-void *push() {
-  queue_push(shared_queue, ONE);
-  queue_push(shared_queue, TWO);
-  queue_push(shared_queue, THREE);
-
-  pthread_exit(NULL);
-}
-
-void *pop() {
-  for (int i = 0; i < 3; ++i) {
-    while (queue_empty(shared_queue));
-    results[i] = queue_pop(shared_queue);
+    producers[i] = p;
+    consumers[i] = c;
   }
 
-  pthread_exit(NULL);
+  for (int i = 0; i < count; ++i) {
+    pthread_join(producers[i], NULL);
+    pthread_join(consumers[i], NULL);
+  }
 }
 
-void test_concurrent_access() {
-  shared_queue = queue_create();
-
-  pthread_t pusher;
-  pthread_t poper;
-  pthread_create(&pusher, NULL, push, NULL);
-  pthread_create(&poper, NULL, pop, NULL);
-  pthread_join(pusher, NULL);
-  pthread_join(poper, NULL);
-
-  assert(ONE == results[0]);
-  assert(TWO == results[1]);
-  assert(THREE == results[2]);
-}
-
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
   printf("\n");
 
-  run_test(test_creating_empty_queue);
-  run_test(test_push);
-  run_test(test_pop);
-  run_test(test_push_and_pop_more_things);
-  run_test(test_queue_empty);
-  run_test(test_concurrent_access);
+  run_test(test_queue_concurrently);
+  run_test(test_queue_basic_put_get);
 
   return 0;
 }
