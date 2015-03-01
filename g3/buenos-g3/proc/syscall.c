@@ -126,10 +126,10 @@ usr_sem_t* syscall_sem_open(char const* name, int value) {
         for (i = 0; i < MAX_SEMAPHORES; ++i) {
             if(usr_sem_table[i].name[0] == '\0') {
                 usr_sem_table[i] = new; // found available spot
+                ret = &usr_sem_table[i];
                 break;
             }
         }
-        ret = &usr_sem_table[i];
     }
     return ret;
 }
