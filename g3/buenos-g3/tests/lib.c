@@ -201,7 +201,9 @@ int syscall_sem_v(usr_sem_t *handle) {
   return (int)_syscall(SYSCALL_SEM_VACATE, (uint32_t)handle, 0, 0);
 }
 
-/* int syscall_sem_destroy(usr_sem_t *handle); */
+int syscall_sem_destroy(usr_sem_t *handle) {
+  return (int)_syscall(SYSCALL_SEM_DESTROY, (uint32_t)handle, 0, 0);
+}
 
 
 #ifdef PROVIDE_STRING_FUNCTIONS
