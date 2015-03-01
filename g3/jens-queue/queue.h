@@ -1,16 +1,16 @@
 #include <pthread.h>
 
 typedef struct node {
-	void *item;
-	struct node *next;
+  void *item;
+  struct node *next;
 } node_t;
 
 typedef struct queue {
   pthread_mutex_t mutex;
   pthread_cond_t cond;
   pthread_mutexattr_t attr;
-	node_t	*head;
-	node_t	*tail;
+  node_t *head;
+  node_t *tail;
 } queue_t;
 
 /* queue_init initializes a new queue */
