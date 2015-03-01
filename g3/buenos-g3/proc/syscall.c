@@ -198,6 +198,9 @@ void syscall_handle(context_t *user_context)
     case SYSCALL_SEM_VACATE:
         V0 = syscall_sem_v((void*) A1);
         break;
+    case SYSCALL_SEM_DESTROY:
+        V0 = syscall_sem_destroy((void*) A1);
+        break;
     default:
         KERNEL_PANIC("Unhandled system call\n");
     }
