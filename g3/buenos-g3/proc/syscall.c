@@ -114,8 +114,6 @@ usr_sem_t* syscall_sem_open(char const* name, int value) {
             ret = &usr_sem_table[i]; // found existing
         }
     }
-    kprintf("Semaphore %s exists: %d\n", name, ret != NULL);
-    kprintf("Value is %d\n", value);
     if(value >= 0) {
         if(ret != NULL) {
             return NULL; // error, already exists
@@ -128,6 +126,7 @@ usr_sem_t* syscall_sem_open(char const* name, int value) {
         for (i = 0; i < MAX_SEMAPHORES; ++i) {
             if(usr_sem_table[i].name[0] == '\0') {
                 usr_sem_table[i] = new; // found existing
+                break;
             }
         }
         ret = &usr_sem_table[i];
@@ -147,7 +146,7 @@ int syscall_sem_p(usr_sem_t* handle) {
     return 0;
  }
 
- int syscall_sem_destroy(usr_sem_t* handle) {
+int syscall_sem_destroy(usr_sem_t* handle) {
     KERNEL_ASSERT(handle != NULL);
     semaphore_destroy(handle->kernel_handle);
     return 0;
