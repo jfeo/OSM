@@ -80,8 +80,8 @@ void test_queue_concurrently() {
 int main(int argc, char **argv) {
   printf("\n");
 
-  run_test(test_queue_basic_put_get);
   run_test(test_queue_concurrently);
+  run_test(test_queue_basic_put_get);
 
   return 0;
 }
