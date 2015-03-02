@@ -10,10 +10,12 @@ int main() {
   for (i = 0; i < 0x20; i++) {
     syscall_sem_p(sem);
 
-    write("Test 1 has the semaphore.");
+    write("Test 1 has the semaphore.\n");
 
     int j;
-    for (j = 0; j < 0xFFFFFF; j++);
+    for (j = 0; j < 10; j++)  {
+      write("1 ...\n");
+    }
 
     syscall_sem_v(sem);
   }

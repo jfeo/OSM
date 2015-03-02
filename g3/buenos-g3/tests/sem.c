@@ -5,6 +5,7 @@ static const char test1[] = "[disk]sem1";
 static const char test2[] = "[disk]sem2";
 
 int main() {
+  /* open semaphore with positive value, as it is new */
   syscall_sem_open("test", 1);
   int pid1 = syscall_exec(test1);
   int pid2 = syscall_exec(test2);
