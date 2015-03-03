@@ -1,0 +1,11 @@
+Nielsen, Pedersen, Warg
+
+I've been poking around in your code but there are simply so many errors that I
+can't test anything without a complete rewrite -- if you want comments on
+anything specific, please ask in the forum or at the next exercise session.
+
+See the general comments; I'm sure at least some of it is useful.
+
+# Points
+
+You gain 1 of 3 points for G2.
