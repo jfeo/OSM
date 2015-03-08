@@ -38,20 +38,57 @@
 #include "kernel/assert.h"
 #include "vm/tlb.h"
 #include "vm/pagetable.h"
-
+#include "kernel/thread.h"
 void tlb_modified_exception(void)
 {
     KERNEL_PANIC("Unhandled TLB modified exception");
 }
 
-void tlb_load_exception(void)
+void tlb_store_exception(void)
 {
     KERNEL_PANIC("Unhandled TLB load exception");
 }
 
-void tlb_store_exception(void)
+void tlb_load_exception(void)
 {
-    KERNEL_PANIC("Unhandled TLB store exception");
+    // typedef struct {
+    //     uint32_t badvaddr; /* Address that caused the exception*/
+    //     uint32_t badvpn2;   VPN2 of the above 
+    //     uint32_t asid; /* ASID of the causing process, only 8 lowest bits used */
+    // } tlb_exception_state_t;
+
+    thread_table_t *tbl = thread_get_current_thread_entry();
+    KERNEL_ASSERT(tbl != NULL);
+
+    pagetable_t *ptbl = tbl->pagetable;
+    KERNEL_ASSERT(ptbl != NULL); // not a kernel thread
+
+    tlb_exception_state_t state;
+    _tlb_get_exception_state(&state);
+
+    int i, c;
+    kprintf("Current pagetable ASID: %d\n", ptbl->ASID);
+    kprintf("Current exception failed ASID: %d\n", state.asid);
+    kprintf("Current thread ID: %d\n", thread_get_current_thread());
+    kprintf("Pagetable has %d valid entries \n", ptbl->valid_count);
+    kprintf("The failing virtual address: %p\n", state.badvaddr);
+    kprintf("Searching in pagetable for entry with VPN2=%d\n", state.badvpn2);
+    for(i = c = 0 ; i < PAGETABLE_ENTRIES ; ++i) {
+        tlb_entry_t *entry = &ptbl->entries[ i ];
+        if(entry->VPN2 == state.badvpn2) {
+            ++c;
+            //_tlb_write_random(entry);
+        }
+    }
+
+    if(c > 1)
+        kprintf("Error: Found %d entries with VPN2 %d in page table.\n", c, state.badvpn2);
+    else if(c == 1)
+        kprintf("Successfully found 1 VPN2 in pagetable.\n");
+    else
+        KERNEL_PANIC("Bad VPN2 was not found");
+    //KERNEL_PANIC("Halt.");
+    tlb_fill(ptbl);
 }
 
 /**
