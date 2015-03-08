@@ -49,7 +49,8 @@ SYSLIBS := crt.o _syscall.o lib.o
 CC      := mips-elf-gcc
 AS      := mips-elf-as
 LD      := mips-elf-ld
-CFLAGS  += -G0 -I.. -Wall -W -Werror -fno-builtin-putc
+TFS     := ../util/tfstool
+CFLAGS  += -G0 -I.. -fno-builtin-putc
 LDFLAGS := --script=ld.userland.script --cref -s -G0
 ASFLAGS := -I.. -Wa,-mips32
 
@@ -58,10 +59,15 @@ ASFLAGS := -I.. -Wa,-mips32
 # Compiling targets (Add explicit targets here if you need to do more
 # complex linking (e.g., your source code is divided to multiple
 # files))
-all: $(TARGETS)
+all: tfs $(TARGETS)
+
+tfs:
+	rm -rf ../fyams.harddisk
+	$(TFS) create ../fyams.harddisk 4096 disk
 
 $(TARGETS): %: $(SYSLIBS) %.o
 	$(LD) -o $@ $(LDFLAGS) -Map $@.map $^
+	$(TFS) write ../fyams.harddisk $@ $@
 
 %.o: %.S
 	$(CC) -o $@ $(ASFLAGS) -c $<
@@ -73,4 +79,4 @@ $(TARGETS): %: $(SYSLIBS) %.o
 clean:
 	rm -f $(SYSLIBS) $(OBJECTS) *.map $(TARGETS) *~
 
-.PHONY: clean
+.PHONY: clean tfs
