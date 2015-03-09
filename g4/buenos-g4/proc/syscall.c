@@ -33,15 +33,19 @@
  * $Id: syscall.c,v 1.3 2004/01/13 11:10:05 ttakanen Exp $
  *
  */
-#include "kernel/cswitch.h"
-#include "proc/syscall.h"
-#include "proc/process.h"
-#include "kernel/halt.h"
-#include "kernel/panic.h"
-#include "lib/libc.h"
-#include "kernel/assert.h"
 #include "drivers/device.h"
 #include "drivers/gcd.h"
+#include "kernel/assert.h"
+#include "kernel/cswitch.h"
+#include "kernel/halt.h"
+#include "kernel/panic.h"
+#include "kernel/thread.h"
+#include "lib/libc.h"
+#include "proc/process.h"
+#include "proc/syscall.h"
+#include "vm/pagepool.h"
+#include "vm/pagetable.h"
+#include "vm/vm.h"
 
 #define A0 user_context->cpu_regs[MIPS_REGISTER_A0]
 #define A1 user_context->cpu_regs[MIPS_REGISTER_A1]
@@ -50,41 +54,89 @@
 #define V0 user_context->cpu_regs[MIPS_REGISTER_V0]
 
 gcd_t* get_tty() {
-    device_t *dev;
-    gcd_t *gcd;
+  device_t *dev;
+  gcd_t *gcd;
 
-    /* Find system console (first tty) */
-    dev = device_get(YAMS_TYPECODE_TTY, 0);
-    KERNEL_ASSERT(dev != NULL);
-    gcd = (gcd_t *)dev->generic_device;
-    KERNEL_ASSERT(gcd != NULL);
-    return gcd;
+  /* Find system console (first tty) */
+  dev = device_get(YAMS_TYPECODE_TTY, 0);
+  KERNEL_ASSERT(dev != NULL);
+  gcd = (gcd_t *)dev->generic_device;
+  KERNEL_ASSERT(gcd != NULL);
+  return gcd;
 }
 
 uint32_t tty_read(int filehandle, void* buffer, int length) {
-    /* Only support standard in for now. */
-    KERNEL_ASSERT(filehandle == FILEHANDLE_STDIN);
-    gcd_t *gcd = get_tty();
-    return gcd->read(gcd, buffer, length);
+  /* Only support standard in for now. */
+  KERNEL_ASSERT(filehandle == FILEHANDLE_STDIN);
+  gcd_t *gcd = get_tty();
+  return gcd->read(gcd, buffer, length);
 }
 
 uint32_t tty_write(int filehandle, void* buffer, int length) {
-    /* Only support standard out for now. */
-    KERNEL_ASSERT(filehandle == FILEHANDLE_STDOUT);
-    gcd_t *gcd = get_tty();
-    return gcd->write(gcd, buffer, length);
+  /* Only support standard out for now. */
+  KERNEL_ASSERT(filehandle == FILEHANDLE_STDOUT);
+  gcd_t *gcd = get_tty();
+  return gcd->write(gcd, buffer, length);
 }
 
 process_id_t syscall_exec(const char *filename) {
-    return process_spawn(filename);
+  return process_spawn(filename);
 }
 
 void syscall_exit(int retval) {
-    process_finish(retval);
+  process_finish(retval);
 }
 
 int syscall_join(process_id_t pid) {
-    return process_join(pid);
+  return process_join(pid);
+}
+
+uint32_t page_align(uint32_t n) {
+  if (n % 1024 == 0) {
+    return n;
+  } else {
+    return (n + (1024 - 1)) & -1024;
+  }
+}
+
+void* syscall_memlimit(void *new_end) {
+  process_control_block_t *pcb = process_get_current_process_entry();
+  void *heap_end = pcb->heap_end;
+  pagetable_t *pagetable = thread_get_current_thread_entry()->pagetable;
+
+  kprintf("heap_end: %p\n", heap_end);
+  kprintf("new_end: %p\n", new_end);
+
+  if (new_end == NULL) return heap_end;
+
+  // error if trying to decrease heap size
+  if ((uint32_t)heap_end >= (uint32_t)new_end) return NULL;
+
+  int number_of_pages = ((uint32_t)new_end - (uint32_t)heap_end) / PAGE_SIZE + PAGE_SIZE;
+
+  // Map each of the pages required
+  int i;
+  for (i = 0; i < number_of_pages; ++i) {
+    // Calculate where the new page ends
+    uint32_t page_boundary = page_align((*(int *)heap_end) + PAGE_SIZE * i);
+
+    // Get a physaddress of a free page
+    uint32_t physaddr = pagepool_get_phys_page();
+    if (physaddr <= 0) return NULL;
+
+    kprintf("virtual: %d\n", page_boundary);
+    kprintf("phys: %d\n", physaddr);
+
+    // Do the mapping
+    vm_map(pagetable, physaddr, page_boundary, 1);
+  }
+
+  // Page align new_end and store that as the new heap_end
+  uint32_t new = page_align(*(int *)new_end);
+  pcb->heap_end = &new;
+
+  // TODO: or last addressable byte?
+  return new_end;
 }
 
 /**
@@ -96,38 +148,41 @@ int syscall_join(process_id_t pid) {
  */
 void syscall_handle(context_t *user_context)
 {
-    /* When a syscall is executed in userland, register a0 contains
-     * the number of the syscall. Registers a1, a2 and a3 contain the
-     * arguments of the syscall. The userland code expects that after
-     * returning from the syscall instruction the return value of the
-     * syscall is found in register v0. Before entering this function
-     * the userland context has been saved to user_context and after
-     * returning from this function the userland context will be
-     * restored from user_context.
-     */
-    switch (A0) {
+  /* When a syscall is executed in userland, register a0 contains
+   * the number of the syscall. Registers a1, a2 and a3 contain the
+   * arguments of the syscall. The userland code expects that after
+   * returning from the syscall instruction the return value of the
+   * syscall is found in register v0. Before entering this function
+   * the userland context has been saved to user_context and after
+   * returning from this function the userland context will be
+   * restored from user_context.
+   */
+  switch (A0) {
     case SYSCALL_HALT:
-        halt_kernel();
-        break;
+      halt_kernel();
+      break;
     case SYSCALL_READ:
-        V0 = tty_read((int) A1, (void*) A2, (int) A3);
-        break;
+      V0 = tty_read((int) A1, (void*) A2, (int) A3);
+      break;
     case SYSCALL_WRITE:
-        V0 = tty_write((int) A1, (void*) A2, (int) A3);
-        break;
+      V0 = tty_write((int) A1, (void*) A2, (int) A3);
+      break;
     case SYSCALL_EXEC:
-        V0 = syscall_exec((char*) A1);
-        break;
+      V0 = syscall_exec((char*) A1);
+      break;
     case SYSCALL_EXIT:
-        syscall_exit((int) A1);
-        break;
+      syscall_exit((int) A1);
+      break;
+    case SYSCALL_MEMLIMIT:
+      V0 = (int)syscall_memlimit((void*) A1);
+      break;
     case SYSCALL_JOIN:
-        V0 = syscall_join((process_id_t) A1);
-        break;
+      V0 = syscall_join((process_id_t) A1);
+      break;
     default:
-        KERNEL_PANIC("Unhandled system call\n");
-    }
+      KERNEL_PANIC("Unhandled system call\n");
+  }
 
-    /* Move to next instruction after system call */
-    user_context->pc += 4;
+  /* Move to next instruction after system call */
+  user_context->pc += 4;
 }

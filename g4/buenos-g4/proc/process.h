@@ -71,6 +71,8 @@ typedef struct {
    store it here. */
     int retval;
 
+    void *heap_end;
+
 /* Only a process' parent should be able to interface with it. */
     process_id_t parent;
 } process_control_block_t;

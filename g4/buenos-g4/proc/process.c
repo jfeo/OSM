@@ -112,14 +112,14 @@ void process_start(process_id_t pid) {
        (including userland stack). Since we don't have proper tlb
        handling code, all these pages must fit into TLB. */
     KERNEL_ASSERT(elf.ro_pages + elf.rw_pages + CONFIG_USERLAND_STACK_SIZE
-                  <= _tlb_get_maxindex() + 1);
+            <= _tlb_get_maxindex() + 1);
 
     /* Allocate and map stack */
     for(i = 0; i < CONFIG_USERLAND_STACK_SIZE; i++) {
         phys_page = pagepool_get_phys_page();
         KERNEL_ASSERT(phys_page != 0);
         vm_map(my_entry->pagetable, phys_page,
-               (USERLAND_STACK_TOP & PAGE_SIZE_MASK) - i*PAGE_SIZE, 1);
+                (USERLAND_STACK_TOP & PAGE_SIZE_MASK) - i*PAGE_SIZE, 1);
     }
 
     /* Allocate and map pages for the segments. We assume that
@@ -129,14 +129,14 @@ void process_start(process_id_t pid) {
         phys_page = pagepool_get_phys_page();
         KERNEL_ASSERT(phys_page != 0);
         vm_map(my_entry->pagetable, phys_page,
-               elf.ro_vaddr + i*PAGE_SIZE, 1);
+                elf.ro_vaddr + i*PAGE_SIZE, 1);
     }
 
     for(i = 0; i < (int)elf.rw_pages; i++) {
         phys_page = pagepool_get_phys_page();
         KERNEL_ASSERT(phys_page != 0);
         vm_map(my_entry->pagetable, phys_page,
-               elf.rw_vaddr + i*PAGE_SIZE, 1);
+                elf.rw_vaddr + i*PAGE_SIZE, 1);
     }
 
     /* Put the mapped pages into TLB. Here we again assume that the
@@ -163,7 +163,7 @@ void process_start(process_id_t pid) {
         KERNEL_ASSERT(elf.ro_vaddr >= PAGE_SIZE);
         KERNEL_ASSERT(vfs_seek(file, elf.ro_location) == VFS_OK);
         KERNEL_ASSERT(vfs_read(file, (void *)elf.ro_vaddr, elf.ro_size)
-                      == (int)elf.ro_size);
+                == (int)elf.ro_size);
     }
 
     if (elf.rw_size > 0) {
@@ -171,7 +171,7 @@ void process_start(process_id_t pid) {
         KERNEL_ASSERT(elf.rw_vaddr >= PAGE_SIZE);
         KERNEL_ASSERT(vfs_seek(file, elf.rw_location) == VFS_OK);
         KERNEL_ASSERT(vfs_read(file, (void *)elf.rw_vaddr, elf.rw_size)
-                      == (int)elf.rw_size);
+                == (int)elf.rw_size);
     }
 
 
@@ -181,15 +181,26 @@ void process_start(process_id_t pid) {
     }
 
     /* Insert page mappings again to TLB to take read-only bits into use */
-    intr_status = _interrupt_disable();
-    tlb_fill(my_entry->pagetable);
-    _interrupt_set_state(intr_status);
+    /* intr_status = _interrupt_disable(); */
+    /* tlb_fill(my_entry->pagetable); */
+    /* _interrupt_set_state(intr_status); */
 
     /* Initialize the user context. (Status register is handled by
        thread_goto_userland) */
     memoryset(&user_context, 0, sizeof(user_context));
     user_context.cpu_regs[MIPS_REGISTER_SP] = USERLAND_STACK_TOP;
     user_context.pc = elf.entry_point;
+
+    // TODO: Are you allowed to do this?!
+    //       Will the pointer go away?
+    int location;
+    if (elf.ro_location > elf.rw_location) {
+      location = elf.ro_location + elf.ro_size;
+    } else {
+      location = elf.rw_location + elf.rw_size;
+    }
+    location = location;
+    process_table[pid].heap_end = &location;
 
     thread_goto_userland(&user_context);
 
@@ -318,7 +329,7 @@ int process_join(process_id_t pid) {
 
     /* Only join with valid pids. */
     if (pid < 0 || pid >= PROCESS_MAX_PROCESSES ||
-        process_table[pid].parent != process_get_current_process()) {
+            process_table[pid].parent != process_get_current_process()) {
         return PROCESS_ILLEGAL_JOIN;
     }
 
