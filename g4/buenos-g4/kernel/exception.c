@@ -52,12 +52,6 @@ static void print_tlb_debug(void)
 {
   tlb_exception_state_t tes;
   _tlb_get_exception_state(&tes);
-
-  kprintf("TLB exception. Details:\n"
-      "Failed Virtual Address: 0x%8.8x\n"
-      "Virtual Page Number:    0x%8.8x\n"
-      "ASID (Thread number):   %d\n",
-      tes.badvaddr, tes.badvpn2, tes.asid);
 }
 
 /** Handles an exception (code != 0) that occured in kernel mode. Will

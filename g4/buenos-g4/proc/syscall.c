@@ -104,38 +104,28 @@ void* syscall_memlimit(void *new_end) {
   void *heap_end = pcb->heap_end;
   pagetable_t *pagetable = thread_get_current_thread_entry()->pagetable;
 
-  kprintf("heap_end: %p\n", heap_end);
-  kprintf("new_end: %p\n", new_end);
-
   if (new_end == NULL) return heap_end;
-
   // error if trying to decrease heap size
-  if ((uint32_t)heap_end >= (uint32_t)new_end) return NULL;
+  if (heap_end >= new_end) return NULL;
 
-  int number_of_pages = ((uint32_t)new_end - (uint32_t)heap_end) / PAGE_SIZE + PAGE_SIZE;
+  int number_of_pages = (new_end - heap_end) / PAGE_SIZE + 1;
 
   // Map each of the pages required
   int i;
   for (i = 0; i < number_of_pages; ++i) {
     // Calculate where the new page ends
-    uint32_t page_boundary = page_align((*(int *)heap_end) + PAGE_SIZE * i);
+    uint32_t page_boundary = ((int)heap_end) + PAGE_SIZE * (i+1);
 
     // Get a physaddress of a free page
     uint32_t physaddr = pagepool_get_phys_page();
     if (physaddr <= 0) return NULL;
 
-    kprintf("virtual: %d\n", page_boundary);
-    kprintf("phys: %d\n", physaddr);
-
     // Do the mapping
     vm_map(pagetable, physaddr, page_boundary, 1);
   }
 
-  // Page align new_end and store that as the new heap_end
-  uint32_t new = page_align(*(int *)new_end);
-  pcb->heap_end = &new;
+  pcb->heap_end = new_end;
 
-  // TODO: or last addressable byte?
   return new_end;
 }
 

@@ -200,8 +200,7 @@ void process_start(process_id_t pid) {
     } else {
       location = elf.rw_location + elf.rw_size;
     }
-    location = location;
-    process_table[pid].heap_end = &location;
+    process_table[pid].heap_end = (void *)location;
 
     thread_goto_userland(&user_context);
 
