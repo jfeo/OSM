@@ -39,7 +39,6 @@
 #include "lib/libc.h"
 #include "kernel/thread.h"
 #include "kernel/exception.h"
-#include "vm/tlb.h"
 
 void syscall_handle(context_t *user_context);
 
@@ -77,8 +76,7 @@ void user_exception_handle(int exception)
 	tlb_load_exception();
 	break;
     case EXCEPTION_TLBS:
-    tlb_store_exception();
-	//KERNEL_PANIC("TLB Store: not handled yet /Simon store");
+	tlb_store_exception();
 	break;
     case EXCEPTION_ADDRL:
 	KERNEL_PANIC("Address Error Load: not handled yet");

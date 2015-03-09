@@ -139,12 +139,6 @@ void process_start(process_id_t pid) {
                elf.rw_vaddr + i*PAGE_SIZE, 1);
     }
 
-    /* Put the mapped pages into TLB. Here we again assume that the
-       pages fit into the TLB. After writing proper TLB exception
-       handling this call should be skipped. */
-    intr_status = _interrupt_disable();
-    tlb_fill(my_entry->pagetable);
-    _interrupt_set_state(intr_status);
 
     /* Now we may use the virtual addresses of the segments. */
 
@@ -179,11 +173,6 @@ void process_start(process_id_t pid) {
     for(i = 0; i < (int)elf.ro_pages; i++) {
         vm_set_dirty(my_entry->pagetable, elf.ro_vaddr + i*PAGE_SIZE, 0);
     }
-
-    /* Insert page mappings again to TLB to take read-only bits into use */
-    intr_status = _interrupt_disable();
-    tlb_fill(my_entry->pagetable);
-    _interrupt_set_state(intr_status);
 
     /* Initialize the user context. (Status register is handled by
        thread_goto_userland) */

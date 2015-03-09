@@ -36,61 +36,73 @@
 
 #include "kernel/panic.h"
 #include "kernel/assert.h"
+#include "kernel/thread.h"
 #include "vm/tlb.h"
 #include "vm/pagetable.h"
-#include "kernel/thread.h"
+
 void tlb_modified_exception(void)
 {
     KERNEL_PANIC("Unhandled TLB modified exception");
 }
 
-void tlb_store_exception(void)
-{
-    KERNEL_PANIC("Unhandled TLB load exception");
-}
+void tlb_exception(void) {
 
-void tlb_load_exception(void)
-{
-    // typedef struct {
-    //     uint32_t badvaddr; /* Address that caused the exception*/
-    //     uint32_t badvpn2;   VPN2 of the above 
-    //     uint32_t asid; /* ASID of the causing process, only 8 lowest bits used */
-    // } tlb_exception_state_t;
+    thread_table_t *threadtbl = thread_get_current_thread_entry();
+    KERNEL_ASSERT(threadtbl != NULL);
 
-    thread_table_t *tbl = thread_get_current_thread_entry();
-    KERNEL_ASSERT(tbl != NULL);
-
-    pagetable_t *ptbl = tbl->pagetable;
+    pagetable_t *ptbl = threadtbl->pagetable;
     KERNEL_ASSERT(ptbl != NULL); // not a kernel thread
 
     tlb_exception_state_t state;
     _tlb_get_exception_state(&state);
 
-    int i, c;
+    unsigned int i;
     kprintf("Current pagetable ASID: %d\n", ptbl->ASID);
     kprintf("Current exception failed ASID: %d\n", state.asid);
     kprintf("Current thread ID: %d\n", thread_get_current_thread());
     kprintf("Pagetable has %d valid entries \n", ptbl->valid_count);
     kprintf("The failing virtual address: %p\n", state.badvaddr);
     kprintf("Searching in pagetable for entry with VPN2=%d\n", state.badvpn2);
-    for(i = c = 0 ; i < PAGETABLE_ENTRIES ; ++i) {
+
+    for(i = 0 ; i < ptbl->valid_count ; ++i) {
         tlb_entry_t *entry = &ptbl->entries[ i ];
-        if(entry->VPN2 == state.badvpn2) {
-            ++c;
-            //_tlb_write_random(entry);
+        int evenpage = state.badvaddr & 4096;
+        int isvalid = (evenpage == 0) ? entry->V0 : entry->V1;
+        kprintf("Entry VPN2: %d, V0: %d, V1: %d, VALID: %s\n", entry->VPN2, entry->V0, entry->V1, isvalid ? "yes" : "no" );
+        if((entry->VPN2 == state.badvpn2) && isvalid) {
+            int index = _tlb_probe(entry);
+            if(index < 0)
+                _tlb_write_random(entry);
+            else {
+                int entries_written = _tlb_write(entry, index, 1);
+                if(entries_written <= 0) {
+                    KERNEL_PANIC("Page fault, Error while writing to existing entry in TLB.\n");
+                }
+                kprintf("Wrote %d existing entries to TLB\n", entries_written);
+            }
+           //_tlb_set_asid(entry->ASID);
+           return;
         }
     }
 
-    if(c > 1)
-        kprintf("Error: Found %d entries with VPN2 %d in page table.\n", c, state.badvpn2);
-    else if(c == 1)
-        kprintf("Successfully found 1 VPN2 in pagetable.\n");
-    else
-        KERNEL_PANIC("Bad VPN2 was not found");
-    //KERNEL_PANIC("Halt.");
-    tlb_fill(ptbl);
+    if(threadtbl->user_context->status & USERLAND_ENABLE_BIT) {
+        KERNEL_PANIC("Page fault (Access violation)\n");
+    }
+    KERNEL_PANIC("Page fault\n"); 
 }
 
+void tlb_store_exception(void)
+{
+    kprintf("TLB Store exception:\n");
+    tlb_exception();
+}
+
+void tlb_load_exception(void)
+{
+    kprintf("TLB Load exception:\n");
+
+    tlb_exception();
+}
 /**
  * Fill TLB with given pagetable. This function is used to set memory
  * mappings in CP0's TLB before we have a proper TLB handling system.
@@ -102,6 +114,7 @@ void tlb_load_exception(void)
 
 void tlb_fill(pagetable_t *pagetable)
 {
+
     if(pagetable == NULL)
 	return;
 
