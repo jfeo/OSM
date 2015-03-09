@@ -36,7 +36,7 @@
 # $Id: Makefile,v 1.6 2005/05/09 00:05:44 jaatroko Exp $
 
 # Add your _userland_ program sources to this variable:
-SOURCES  := halt.c readwrite.c exec.c exec_child1.c exec_child2.c hw.c pfault.c
+SOURCES  := halt.c readwrite.c exec.c exec_child1.c exec_child2.c hw.c tlb.c
 
 OBJECTS  := $(patsubst %.c, %.o, $(SOURCES))
 TARGETS  := $(patsubst %.o, %, $(OBJECTS))
@@ -50,7 +50,7 @@ CC      := mips-elf-gcc
 AS      := mips-elf-as
 LD      := mips-elf-ld
 TFS     := ../util/tfstool
-CFLAGS  += -G0 -I.. -fno-builtin-putc
+CFLAGS  += -G0 -I.. -Wall -W -Werror -fno-builtin-putc
 LDFLAGS := --script=ld.userland.script --cref -s -G0
 ASFLAGS := -I.. -Wa,-mips32
 
@@ -62,6 +62,7 @@ ASFLAGS := -I.. -Wa,-mips32
 all: tfs $(TARGETS)
 
 tfs:
+	cd .. && make && cd -
 	rm -rf ../fyams.harddisk
 	$(TFS) create ../fyams.harddisk 4096 disk
 
