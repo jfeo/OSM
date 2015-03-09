@@ -1,0 +1,445 @@
+# General comments
+
+All groups have received this file.  The comments may or may not apply to you
+(but read them anyway).
+
+# Process subsystem initialization
+
+This is so common a mistake, so I'll just put it here: did you remember to call
+`process_init'?  An obvious place to call it would be in `init' in
+"/init/main.c".
+
+# Strings and arrays
+
+In C an array is simply a number of objects of the same type placed contiguously
+in memory.  The value (but not the type) of a variable holding an array is a
+pointer to the first element in the array.
+
+Lets see an example:
+
+```
+  typedef struct {
+    int x;
+    void *y;
+  } mystruct;
+
+  mystruct myarray[3];
+```
+
+This allocates space for `myarray' (but does not initialize it).  Somewhere in
+memory we will have this:
+
+```
+       one `mystruct`
+
+        .----^----.
+       /           \
+  ----.-------------.-------------.-------------.----
+      |.-----------.|.-----------.|.-----------.|
+  ... ||  x  |  y  |||  x  |  y  |||  x  |  y  || ...
+      |'-----------'|'-----------'|'-----------'|
+  ----'-------------'-------------'-------------'----
+      ^             ^             ^
+      myarray       &myarray[1]   &myarray[2]
+
+  Low addrs                        High addrs
+```
+
+As you know we can sometimes write the same thing more than one way.  F.x:
+
+```
+  myarray = &myarray[0]
+```
+
+and
+
+```
+  &myarray[1] = myarray + 1 = (mystruct *)((size_t)myarray + sizeof(mystruct))
+```
+
+Notice that `y', which is a pointer, takes up the same space in each array
+element; whatever it points to is stored elsewhere.
+
+Also notice that in general the size of an array cannot be known, because it is
+not stored anywhere.  The exceptions are when the size is known at compile and
+when the compiler can generate code to calculate the size.
+
+A string (in C) is an array of `char' elements.  Since an array's size is not
+stored we use the special character '\0' (the byte 0 -- eight 0 bits) to signal
+the end of a string.  Not all languages use this technique.  Indeed representing
+a string as an array an a size field is typically called a 'Pascal string' (as
+opposed to a 'C string').
+
+In C there's a special syntax dedicated to writing an array of characters ending
+in an '\0' element:
+
+```
+  "Hello, world!"
+```
+
+That is exactly the same as:
+
+```
+  {'H', 'e', 'l', 'l', 'o', ',', ' ', 'w', 'o', 'r', 'l', 'd', '!', '\0'}
+```
+
+When declaring an array its size can be inferred at compile-time if its
+definition is also given and is a static value.  Example:
+
+```
+  int myarray[] = {1, 2, 3};
+```
+
+This declares an array of length 3.  Similarly:
+
+```
+  char myarray[] = "Hello, world!";
+```
+
+This declares an array of length 14 (no, not 13 -- why?).
+
+As long as an array is not passed through a function call we can use the
+`sizeof' operator to get its size.  So to print the string above we could write:
+
+```
+  syscall_write(stdout, myarray, sizeof(myarray) - 1);
+```
+
+Notice the `- 1'; it's there because `myarray' contains a '\0' which we don't
+want to write.
+
+Please be aware that the declaration above is *not* the same as:
+
+```
+  char *myarray = "Hello, world!";
+```
+
+This latter form declares a pointer to a character (in this case a C string).
+It work's because `"..."' evaluates to the address of the string.  In this case
+we cannot use `sizeof' because the compiler only knows that `myarray' is a
+pointer.
+
+One last note: I have seen students write something similar to this:
+
+```
+  char str[] = "lolwat";
+  syscall_write(stdout, &str, 6);
+```
+
+This is *wrong*: `syscall_write' expects a pointer to a string, but instead it
+is given a pointer to a pointer to a string.  The result being that the second
+pointer (the pointer to the string) will be printed as if it were a string.
+Lets say the string is placed at virtual address 0x2541.  YAMS is a big-endian
+machine.  This means when a machine word (a pointer in this case) is stored in
+memory, its most significant byte (MSB) is placed first and its least
+significant byte (LSB) is placed last.  So if our string is placed at address
+0x2541 then `str' will be the four bytes (pointers are four bytes) `{0x00, 0x00,
+0x25, 0x41}'.  Interpreted as strings this is two empty strings and a string
+starting with "%A" (who knows what follows?), not at all what we wanted.
+
+# Virtual memory and page faults
+
+As you know, Buenos doesn't have real virtual memory (yet).  But it still has a
+limited form of virtual memory.  In particular each thread has a page table
+mapping virtual memory to physical memory.  When a thread gets the CPU, its page
+table is loaded into the TLB (Translation Lookaside Buffer).  The TLB in YAMS
+can hold 16 entries so at the moment each thread can map a maximum of 32
+physical pages (entries map pairs of pages -- see the YAMS manual).
+
+If memory that does not have an entry in the TLB is accessed, a TLB exception
+will be generated.  Since you have not yet written any code to handle the
+exception your kernel will panic.  It looks something like this:
+
+```
+  TLB exception. Details:
+  Failed Virtual Address: 0x00001514
+  Virtual Page Number:    0x00000000
+  ASID (Thread number):   3
+  Kernel panic (cpu: 0): kernel/exception.c:89 --- TLB Load: not handled yet
+```
+
+I bet most of you have seen something similar to this.
+
+Let's first establish a working example.  In this example we have two threads
+each mapping a number of physical pages (corresponding to processes they live
+in).  Both map one page for their read-only section (that's their code, mostly)
+and one page for their stack (this number is defined in "/kernel/config.h").
+The virtual address of the stack is defined in "/proc/process.h".  The virtual
+addresses of the sections come from the linker script
+"/tests/ld.userland.script".  Thread 1 maps two pages for its read-write
+section, whereas thread 2 only maps one.  Notice that both threads can use the
+same virtual addresses: This is the whole idea!
+
+```
+                Virtual memory          64MB physical  (the size is set in
+                Tread 2                 memory          "fyams.conf")
+
+               / [UNMAPPED!] /         .-------------.
+               \             \         / Unclaimed   / < 0x3fffffc
+  0x7fff0000 > |-------------|         \ physical    \
+  0x7fffeffc > |             |         / memory      /
+               |    STACK    |         \             \
+               |             |         |             |
+  0x7fffe000 > |-------------|--.      |-------------| < 0x004c000
+               \             \  |      | Thread 2    | < 0x004bffc
+               /             /  |      | Read-write  |
+               \             \  |      |             |
+               / [UNMAPPED!] /  | .--->|-------------| < 0x004b000
+               \             \  | |    | Thread 2    | < 0x004affc
+               /             /  | |    | Read-only   |
+               \             \  | |    |             |
+               /             /  | | .->|-------------| < 0x004a000
+  0x00003000 > |-------------|  | | |  | Thread 2    | < 0x0049ffc
+  0x00002ffc > |             |  | | |  | Stack       |
+               |  Read-write |  | | |  |             |
+               |             |  '-+-+->|-------------| < 0x0049000
+  0x00002000 > |-------------|----' |  | Thread 1    | < 0x0048ffc
+  0x00001ffc > |             |      |  | Read-write  |
+               |  Read-only  |      |  |             |
+               |             |      |  |             |
+  0x00001000 > |-------------|------'  |             |
+               / [UNMAPPED!] /         |             |
+               \             \  .----->|-------------| < 0x0047000
+                                |      | Thread 1    | < 0x0046ffc
+                Virtual memory  |      | Read-only   |
+                Tread 1         |      |             |
+                                | .--->|-------------| < 0x0046000
+               / [UNMAPPED!] /  | |    | Thread 1    | < 0x0045ffc
+               \             \  | |    | Stack       |
+  0x7fff0000 > |-------------|  | |    |             |
+  0x7fffeffc > |             |  | | .->|-------------| < 0x0045000
+               |    STACK    |  | | |  | Kernel      |
+               |             |  | | |  | Structures  |
+  0x7fffe000 > |-------------|--+-+-'  | e.g.        |
+               \             \  | |    | - interrupt |
+               / [UNMAPPED!] /  | |    |   stacks    |
+               \             \  | |    | - TTY r/w   |
+               /             /  | |    |   buffers   |
+  0x00004000 > |-------------|  | |    |             |
+  0x00003ffc > |             |  | |    |-------------|
+               |  Read-write |  | |    |             |
+               |             |  | |    | Kernel code |
+               |             |  | |    |             |
+               |             |  | |    '-------------' < 0x0000000
+               |             |  | |
+               |             |  | |
+  0x00002000 > |-------------|--' |
+  0x00001ffc > |             |    |
+               |  Read-only  |    |
+               |             |    |
+  0x00001000 > |-------------|----'
+               / [UNMAPPED!] /
+               \             \
+
+```
+
+(Note: to understand where the physical addresses come from you should have a
+       look at "/vm/pagepool.{c,h}" which uses "/kernel/kmalloc.{c,h}" which in
+       turn allocates memory starting from `KERNEL_ENDS_HERE' which is defined
+       in the linker script "/ld.script" to be just after the kernel.  Phew!
+)
+
+(Note': The kernels memory is accessed through address ranges
+        0x80000000--0x9fffffff and 0xa0000000--0xafffffff which are mapped by
+        hardware to physical address ranges 0x00000000--0x1fffffff and
+        0x00000000--0x0fffffff respectively.  See the YAMS manual for details.
+)
+
+One dead sure way to trigger a TLB exception is to access an address in page 0.
+The linker script "/tests/ld.userland.script" ensures that the first mapped
+address is 0x1000.  Try this:
+
+```
+  int x = *((int *)0);
+```
+
+And this
+
+```
+  *((int *)0) = 42;
+```
+
+What happens?  Is there a difference?
+
+So what happens if a pointer in thread 1 is passed to thread 2?  It's hard to
+say but it will probably not be what was intended: the pointer points to
+something in thread 1's virtual memory space, but who's to say what will be at
+that address in thread 2?  It might not even be mapped.  In the example above
+address 0x3800 is only mapped in thread 1 (and maps to physical address
+0x0048800).  Address 0x1400 is mapped in both threads, but backed by physical
+address 0x0046400 in thread 1 and address 0x004a400 in thread 2.
+
+Many of you have committed the crime(!) of passing a pointer to virtual memory
+between threads: namely a pointer to the name of the program to execute.  In
+`process_spawn' you may have written something along the lines of
+
+```
+  process_table[pid].executable = executable; // <- don't do this
+  // ...
+  tid = thread_create((void (*) (uint32_t))&process_start, (uint32_t)pid);
+  thread_run(tid);
+  // ...
+```
+
+But here `executable' (the right-hand-side) is a pointer to a string in the
+currently running process's virtual memory space!  It has no meaning in the new
+thread where it will be used (in `process_start').
+
+Some of you have gotten away with this too.  It took me a while to figure out
+why it works in some cases when it shouldn't, so I will just take a few moments
+to explain why.
+
+First, we can trigger the expected behavior (a TLB exception) by forcing a
+context switch just before the pointer to our string is used on line 95 in
+"/proc/process.c":
+
+```
+  file = vfs_open((char *)executable);
+```
+
+A context switch can be forced with the function `thread_switch':
+
+```
+  thread_switch(); // force context switch
+  file = vfs_open((char *)executable);
+```
+
+So what is the difference?  What `thread_switch' really does is to generate
+software interrupt 0.  This interrupt is handled by the code in
+"/kernel/cswitch.S" which eventually calls `interrupt_handle' in
+"/kernel/interrupt.c".  This function in turn calls `scheduler_schedule'
+("/kernel/scheduler.c") which changes the executing thread of the interrupted
+processor.  After this, `tlb_fill' ("/vm/tlb.c") is called, which populates the
+TLB with the page table of the new process.  But there's a bug in this function:
+If a page table is given it is first written to the TLB and then the `EntrHi'
+register is set to reflect the page table's address space identifier (ASID).
+This is important because the hardware will only consider entries in the TLB
+which has a matching ASID.
+
+So the bug is that if a context switch is performed to a thread which does not
+have a page table (`pagetable' in the thread entry is `NULL') then the `EntrHi'
+register will not be set to reflect the thread's ASID.  The ASID will still be
+that of the old thread.  So the hardware will consider TLB entries belonging to
+the old thread.
+
+This explains why passing a string pointer to the new thread works: Switching to
+the new thread (which is running `process_start') does not update the ASID (or
+the TLB), which means that accesses to virtual memory works just as if we were
+running in the other thread (the one running `process_spawn').  It does not,
+however, explain why it only works some of the time.
+
+The reason is that the new thread gets a page table a few lines before the
+string pointer is used; on line 92 in "/proc/process.c":
+
+```
+  my_entry->pagetable = pagetable;
+```
+
+So when stuff works anyway, it is only because no interrupt happened between
+line 92 and 95.  In all the other cases where we see the expected TLB exception,
+it is because an interrupt (most likely a timer interrupt -- hardware interrupt
+number 5 that is) happened, resulting in a context switch, and setting of the
+ASID.
+
+## TL;DR
+
+Don't pass pointers to virtual memory between threads!  Instead you should copy
+whatever data (the executables name in this case) to somewhere in kernel space.
+For this assignment you should allocate space for the executables name in the
+`process_control_block_t':
+
+```
+  typedef struct {
+    const char executable[PROCESS_MAX_FILELEN];
+    ...
+  } process_control_block_t;
+```
+
+And then copy the name to the PCB.  In "/lib/libc.c" you will find (among many
+other useful functions) `stringcopy'; use that:
+
+```
+  stringcopy(pcb->executable, executable, PROCESS_MAX_FILELEN);
+```
+
+# Clearing a variable
+
+Both in G1 and in G2 I see students obsessed with "clearing" variables.  In G1's
+task 1 many implemented `heap_clear' something like this:
+
+```
+  void heap_clear (heap *h) {
+    free(h->root);
+    h->size = 0;
+    h->alloc_size = 0;
+  }
+```
+
+Some even went as far as clearing all the entry in `h->root' before free'ing it.
+Just to be clear, this is the "correct" implementation:
+
+```
+  void heap_clear (heap *h) {
+    free(h->rooot);
+  }
+```
+
+So why is the other wrong?  Well, it's not wrong in the sense that it doesn't
+work, but setting the `size' and `alloc_size' fields is ridiculous; these fields
+have no meaning after the heap has been cleared!  Please not that this semantic
+is not enforced by the language -- it's something that we as developers decide.
+
+Similarly many of you have insisted on giving "meaningful" values to all the
+fields in your process control blocks.  But ask yourself: what is the semantics
+of the `retval' field when the `state' is not `PROCESS_ZOMBIE' (or
+`PROCESS_DEAD' or `PROCESS_TERMINATED' or what else you might have called this
+state)?  What is the semantics of the `executable' field when the state is
+`PROCESS_FREE'?
+
+Yes, you guessed it!  They have no meaning.  Thus it is futile to attempt to
+give them "meaningful" values.
+
+## TL;DR
+
+Don't give set variables when they have no meaning.  E.g. don't do this:
+
+```
+  ...
+  process_table[i].state = PROCESS_FREE;
+  process_table[i].executable = NULL;
+  ...
+```
+
+And don't invent special values alá `PARENT_NOT_SET' (some have invented a
+special `parent' value `ORPHANED' -- this is perfectly OK, and even a little
+ingenious).
+
+## Exceptions
+
+There are of course exceptions to this rule of thumb.  One exception is when the
+data left in now meaningless variables is confidential.  Let's say that I call
+`malloc'; the contents of the allocated space is undefined.  But the kernel must
+make sure that physical memory is cleared before being passed between threads;
+we don't want the memory used by `sudo' to store your password accidentally end
+up in another process.
+
+This is not an issue in G2 because none of your data structures are accessible
+in user space.
+
+# Orphaned children
+
+What should happen do a process when its parent exits (+1 to you if you have
+considered this issue)?  There are multiple strategies:
+ 1) In Linux the `init' (PID = 1) process adopts orphaned children.
+ 2) You could just kill the process when its parent exits.
+ 3) You could mark the process as orphaned and transition directly to the
+    `PROCESS_FREE' state when it exits (that is, bypass the `PROCESS_ZOMBIE'
+    state because you know that no-one will ever need the return value).
+
+(Note: joining a process for the purpose of freeing its slot in the process
+       table is usually called "reaping" the child/zombie.
+)
+
+# On the importance of testing your code
+
+It's very important.

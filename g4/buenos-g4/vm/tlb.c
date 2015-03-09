@@ -36,13 +36,13 @@
 
 #include "kernel/panic.h"
 #include "kernel/assert.h"
+#include "kernel/thread.h"
 #include "vm/tlb.h"
 #include "vm/pagetable.h"
 #include "kernel/thread.h"
 
 void tlb_modified_exception(void)
 {
-
   KERNEL_PANIC("Unhandled TLB modified exception");
 }
 
@@ -57,7 +57,6 @@ void tlb_load_exception(void)
   size_t i;
   for (i = 0; i < pagetable->valid_count; i++) {
     tlb_entry_t* entry = &pagetable->entries[i];
-    kprintf("vpn2: %d\n", state.badvpn2);
     if (entry->VPN2 == state.badvpn2) {
       _tlb_write_random(&pagetable->entries[i]);
       return;
@@ -77,7 +76,6 @@ void tlb_store_exception(void)
   size_t i;
   for (i = 0; i < pagetable->valid_count; i++) {
     tlb_entry_t* entry = &pagetable->entries[i];
-    kprintf("vpn2: %d\n", state.badvpn2);
     if (entry->VPN2 == state.badvpn2) {
       _tlb_write_random(&pagetable->entries[i]);
       return;

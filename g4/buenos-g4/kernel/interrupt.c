@@ -174,6 +174,7 @@ void interrupt_handle(uint32_t cause) {
     /* If this handler is registered for any of the interrupts
      * that occured, call it.
      */
+
     if ((cause & interrupt_handlers[i].irq) != 0)
       interrupt_handlers[i].handler(interrupt_handlers[i].device);
   }

@@ -180,11 +180,14 @@ void process_start(process_id_t pid) {
         vm_set_dirty(my_entry->pagetable, elf.ro_vaddr + i*PAGE_SIZE, 0);
     }
 
+<<<<<<< HEAD
     /* Insert page mappings again to TLB to take read-only bits into use */
     /* intr_status = _interrupt_disable(); */
     /* tlb_fill(my_entry->pagetable); */
     /* _interrupt_set_state(intr_status); */
 
+=======
+>>>>>>> 828f2ed7f040b1e0f8e8f4cb84c76b3afbfd6747
     /* Initialize the user context. (Status register is handled by
        thread_goto_userland) */
     memoryset(&user_context, 0, sizeof(user_context));
