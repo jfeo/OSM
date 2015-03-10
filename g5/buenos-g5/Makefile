@@ -51,7 +51,7 @@ UTILTARGET := util/tfstool
 CC      := mips-elf-gcc
 AS      := mips-elf-as
 LD      := mips-elf-ld
-CFLAGS  += -g -G0 -O2 -I. -std=c99 -Wall -W -Werror $(CHANGEDFLAGS)
+CFLAGS  += -g -G0 -O2 -I. -W -Wall -Werror $(CHANGEDFLAGS)
 LDFLAGS := --script=ld.script --cref -G0 -Map buenos.map
 ASFLAGS := -gstabs+ -I. -Wa,-mips32 $(CHANGEDFLAGS)
 # -G0 is needed to avoid GP optimization (LD won't link if it is used)
@@ -61,6 +61,9 @@ GTAR    := tar
 SRC :=
 
 all: $(TARGET) $(UTILTARGET)
+
+tests:
+	(cd tests && make clean && make && cd -)
 
 # include the description for each module
 include $(patsubst %, %/module.mk, $(MODULES))
@@ -124,10 +127,10 @@ tags: ctags etags
 $(SRC):
 	@true
 
-# Builds the buenos-g3.tar.gz to the parent directory!
+# Builds the buenos-g4.tar.gz to the parent directory!
 # This target includes docs. Do not use this for submission
-buenos-g3.tar.gz: $(SRC)
-	(cd ..; find buenos-g3 -type f | grep -Ev '[.]d$$' \
+buenos-g4.tar.gz: $(SRC)
+	(cd ..; find buenos-g4 -type f | grep -Ev '[.]d$$' \
 	        | grep -Ev '[.]gitignore' \
                 | xargs $(GTAR) cvf - | gzip >$@)
 
@@ -136,7 +139,7 @@ submit-archive: $(SRC)
 	(cd ..; $(GTAR) cf - buenos | gzip >submit-$(PHASE).tar.gz)
 
 clean:	utilclean
-	rm -f $(TARGET) $(OBJS) *~ */*~ buenos.map tags TAGS fyams.socket fyams.harddisk
+	rm -f $(TARGET) $(OBJS) *~ */*~ buenos.map tags TAGS fyams.socket
 
 real-clean: clean
 	rm -f $(DEPS)
@@ -144,3 +147,4 @@ real-clean: clean
 .PHONY: clean
 .PHONY: doc
 .PHONY: submit-archive buenos-g1.tar.gz
+.PHONY: tests
