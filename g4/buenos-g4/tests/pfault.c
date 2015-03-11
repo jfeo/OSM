@@ -4,8 +4,8 @@
 
 #include "tests/lib.h"
 
+ int max[100000];
 int main(void)
 {
-  int max[100000];
   return max[0];
 }

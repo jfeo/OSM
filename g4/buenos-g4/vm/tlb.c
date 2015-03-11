@@ -73,6 +73,8 @@ void tlb_store_exception(void)
   pagetable = thread_get_current_thread_entry()->pagetable;
   _tlb_get_exception_state(&state);
 
+  kprintf("Page: %d\n", pagetable->valid_count);
+
   size_t i;
   for (i = 0; i < pagetable->valid_count; i++) {
     tlb_entry_t* entry = &pagetable->entries[i];

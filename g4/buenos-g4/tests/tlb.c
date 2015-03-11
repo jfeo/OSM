@@ -3,6 +3,7 @@ int a[3000];
 
 int main() {
   int i;
+  int p[10000];
   for (i = 0; i < 3000; i++) {
     a[i] = i;
   }
@@ -10,5 +11,5 @@ int main() {
     printf("i = %d\n", a[i]);
   }
 
-  return 0;
+  return p[0];
 }
