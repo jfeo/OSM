@@ -70,6 +70,14 @@ int syscall_close(int file) {
   return error;
 }
 
+int syscall_open(const char* path) {
+  openfile_t file = vfs_open(path);
+  if (file < 0) /* return vfs error */
+    return file;
+
+  return file + 2; /* map to avoid conflict with stdin/stdout/stderr */
+}
+
 /**
  * Handle system calls. Interrupts are enabled when this function is
  * called.
