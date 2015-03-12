@@ -67,6 +67,7 @@ tfs:
 	$(TFS) create ../fyams.harddisk 4096 disk
 	$(TFS) write ../fyams.harddisk test.txt test.txt
 
+
 $(TARGETS): %: $(SYSLIBS) %.o
 	$(LD) -o $@ $(LDFLAGS) -Map $@.map $^
 	$(TFS) write ../fyams.harddisk $@ $@

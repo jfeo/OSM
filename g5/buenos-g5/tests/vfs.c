@@ -19,16 +19,16 @@
 
 void err(int code) {
 	switch(code) {
-		case VFS_OK: write("Error: VFS_OK"); break;
-		case VFS_NOT_SUPPORTED: write("Error: VFS_NOT_SUPPORTED"); break;
-		case VFS_ERROR: write("Error: VFS_ERROR"); break;
-		case VFS_INVALID_PARAMS: write("Error: VFS_INVALID_PARAMS"); break;
-		case VFS_NOT_OPEN: write("Error: VFS_NOT_OPEN"); break;
-		case VFS_NOT_FOUND: write("Error: VFS_NOT_FOUND"); break;
-		case VFS_NO_SUCH_FS: write("Error: VFS_NO_SUCH_FS"); break;
-		case VFS_LIMIT: write("Error: VFS_LIMIT"); break;
-		case VFS_IN_USE: write("Error: VFS_IN_USE"); break;
-		case VFS_UNUSABLE: write("Error: VFS_UNUSABLE"); break;
+		case VFS_OK: write("Error: VFS_OK\n"); break;
+		case VFS_NOT_SUPPORTED: write("Error: VFS_NOT_SUPPORTED\n"); break;
+		case VFS_ERROR: write("Error: VFS_ERROR\n"); break;
+		case VFS_INVALID_PARAMS: write("Error: VFS_INVALID_PARAMS\n"); break;
+		case VFS_NOT_OPEN: write("Error: VFS_NOT_OPEN\n"); break;
+		case VFS_NOT_FOUND: write("Error: VFS_NOT_FOUND\n"); break;
+		case VFS_NO_SUCH_FS: write("Error: VFS_NO_SUCH_FS\n"); break;
+		case VFS_LIMIT: write("Error: VFS_LIMIT\n"); break;
+		case VFS_IN_USE: write("Error: VFS_IN_USE\n"); break;
+		case VFS_UNUSABLE: write("Error: VFS_UNUSABLE\n"); break;
 		default:
 			printf("Unhandled error. Code: %d\n", code);
 	}
@@ -37,9 +37,13 @@ int main(void)
 {
   write("Hello\n");
   int file = syscall_open("[disk]data");
-  if(file < 2) {
+  if(file <= 2) {
   	err(file);
   	return file;
+  }
+  int error = syscall_close(file);
+  if(error < 0) {
+  	err(error);
   }
   return 0;
 }

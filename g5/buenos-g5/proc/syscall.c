@@ -64,6 +64,12 @@ int syscall_join(process_id_t pid) {
   return process_join(pid);
 }
 
+int syscall_close(int file) {
+  kprintf("Close file: %d\n", file);
+  int error = vfs_close(file-2);
+  return error;
+}
+
 int syscall_open(const char* path) {
   openfile_t file = vfs_open(path);
   if (file < 0) /* return vfs error */
@@ -125,6 +131,7 @@ void syscall_handle(context_t *user_context)
     V0 = syscall_open((const char*) A1);
     break;    
   case SYSCALL_CLOSE:
+    V0 = syscall_close((int) A1);
     break;   
   case SYSCALL_SEEK:
     break;      
