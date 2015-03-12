@@ -83,6 +83,22 @@ int syscall_write(int file, void* buf, int length) {
   return written;
 }
 
+
+int syscall_create(const char* pathname, int size) {
+
+}
+
+int syscall_remove(const char* pathname) {
+
+}
+
+int syscall_seek(int filehandle, int offset) {
+
+}
+
+int syscall_tell(int filehandle) {
+
+}
 /**
  * Handle system calls. Interrupts are enabled when this function is
  * called.
@@ -111,6 +127,7 @@ void syscall_handle(context_t *user_context)
   case SYSCALL_WRITE:
   {
     int handle = (int) A1;
+    //kprintf("Handle: %d\n", handle);
     if(handle > 2) {
       V0 = syscall_write(handle, (void*) A2, (int) A3);
     }

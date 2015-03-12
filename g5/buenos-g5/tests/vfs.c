@@ -39,14 +39,13 @@ void err_(int code) {
 int main(void)
 {
   write("Hello\n");
-  int file = syscall_open("[disk]tet.txt");
+  int file = syscall_open("[disk]test.txt");
   if(file <= 2) {
   	err(file);
   	return file;
   }
 
   char b[] = "\nWriteTest\n";
-  printf("Size: %d\n", sizeof(b));
   int error = syscall_write(file, &b, sizeof(b));
   if(error < 0) {
   	err(error);
