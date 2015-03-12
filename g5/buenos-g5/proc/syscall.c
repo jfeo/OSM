@@ -78,6 +78,11 @@ int syscall_open(const char* path) {
   return file + 2; /* map to avoid conflict with stdin/stdout/stderr */
 }
 
+int syscall_write(int file, void* buf, int length) {
+  int written = vfs_write(file-2, buf, length);
+  return written;
+}
+
 /**
  * Handle system calls. Interrupts are enabled when this function is
  * called.
@@ -104,8 +109,16 @@ void syscall_handle(context_t *user_context)
     V0 = io_read((int) A1, (void*) A2, (int) A3);
     break;
   case SYSCALL_WRITE:
-    V0 = io_write((int) A1, (void*) A2, (int) A3);
+  {
+    int handle = (int) A1;
+    if(handle > 2) {
+      syscall_write(handle, (void*) A2, (int) A3);
+    }
+    else {
+      V0 = io_write((int) A1, (void*) A2, (int) A3);
+    }    
     break;
+  }
   case SYSCALL_EXEC:
     V0 = syscall_exec((char*) A1);
     break;

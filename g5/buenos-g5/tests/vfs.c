@@ -41,6 +41,10 @@ int main(void)
   	err(file);
   	return file;
   }
+
+  char b[] = "\nWriteTest\n";
+  syscall_write(file, &b, sizeof(b));
+
   int error = syscall_close(file);
   if(error < 0) {
   	err(error);
