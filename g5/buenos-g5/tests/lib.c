@@ -208,7 +208,7 @@ int syscall_create(const char *filename, int size)
  */
 int syscall_delete(const char *filename)
 {
-    return (int)_syscall(SYSCALL_DELETE, (uint32_t)filename, 0, 0);
+    return (int)_syscall(SYSCALL_REMOVE, (uint32_t)filename, 0, 0);
 }
 
 /* The following functions are not system calls, but convenient

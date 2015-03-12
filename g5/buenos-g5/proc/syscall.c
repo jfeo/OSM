@@ -64,6 +64,12 @@ int syscall_join(process_id_t pid) {
   return process_join(pid);
 }
 
+int syscall_open(const char* path) {
+  kprintf("Open file: %s\n", path);
+  openfile_t file = vfs_open(path);
+  return file;
+}
+
 /**
  * Handle system calls. Interrupts are enabled when this function is
  * called.
@@ -114,6 +120,7 @@ void syscall_handle(context_t *user_context)
     V0 = usr_sem_destroy((usr_sem_t*) A1);
     break;
   case SYSCALL_OPEN:
+    V0 = syscall_open((const char*) A1);
     break;    
   case SYSCALL_CLOSE:
     break;   
