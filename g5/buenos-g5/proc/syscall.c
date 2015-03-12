@@ -112,7 +112,7 @@ void syscall_handle(context_t *user_context)
   {
     int handle = (int) A1;
     if(handle > 2) {
-      syscall_write(handle, (void*) A2, (int) A3);
+      V0 = syscall_write(handle, (void*) A2, (int) A3);
     }
     else {
       V0 = io_write((int) A1, (void*) A2, (int) A3);
