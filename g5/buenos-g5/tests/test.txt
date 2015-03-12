@@ -1,0 +1,5 @@
+GRAFIKHAIKU af Jens Feodor Nielsen
+
+rasterisering
+transformationsmatricer
+interpolation
