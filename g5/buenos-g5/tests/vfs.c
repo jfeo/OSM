@@ -51,6 +51,11 @@ int main(void)
   	err(error);
   }
 
+  int tell = syscall_tell(file);
+  if(tell != 12) {
+  	printf("Error: tell returned unexcepted value %d\n", tell);
+  }
+
   error = syscall_close(file);
   if(error < 0) {
   	err(error);

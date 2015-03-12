@@ -85,20 +85,25 @@ int syscall_write(int file, void* buf, int length) {
 
 
 int syscall_create(const char* pathname, int size) {
-
+  int file = vfs_create(pathname, size);
+  if(file < 0) {
+    return file;
+  }
+  return file+2;
 }
 
 int syscall_remove(const char* pathname) {
-
+  return vfs_remove(pathname);
 }
 
 int syscall_seek(int filehandle, int offset) {
-
+  return vfs_seek(filehandle-2, offset);
 }
 
 int syscall_tell(int filehandle) {
-
+  return vfs_tell(filehandle-2);
 }
+
 /**
  * Handle system calls. Interrupts are enabled when this function is
  * called.
@@ -170,6 +175,7 @@ void syscall_handle(context_t *user_context)
   case SYSCALL_REMOVE:
     break;  
   case SYSCALL_TELL:
+    V0 = syscall_tell((int) A1);
     break;    
   default:
     KERNEL_PANIC("Unhandled system call\n");

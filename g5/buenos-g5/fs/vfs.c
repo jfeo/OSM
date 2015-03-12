@@ -678,6 +678,38 @@ int vfs_seek(openfile_t file, int seek_position)
 }
 
 /**
+ * Tell given file's position.
+ *
+ * @param file Open file
+ *
+ * @return seek position, else error code.
+ *
+ */
+int vfs_tell(openfile_t file)
+{
+  openfile_entry_t *openfile;
+  int tell;
+
+  if (vfs_start_op() != VFS_OK)
+    return VFS_UNUSABLE;
+
+  semaphore_P(openfile_table.sem);
+
+  openfile = vfs_verify_open(file);
+  if (openfile == NULL) {
+    semaphore_V(openfile_table.sem);
+    return VFS_NOT_OPEN;
+  }
+
+  tell = openfile->seek_position;
+
+  semaphore_V(openfile_table.sem);
+
+  vfs_end_op();
+  return tell;
+}
+
+/**
  * Reads at most bufsize bytes from given open file to given buffer.
  * The read is started from current seek position and after read, the
  * position is updated.
