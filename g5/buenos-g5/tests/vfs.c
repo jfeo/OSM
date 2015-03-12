@@ -17,7 +17,7 @@
 #define VFS_IN_USE          -8
 #define VFS_UNUSABLE        -9
 
-void err(int code) {
+void err_(int code) {
 	switch(code) {
 		case VFS_OK: write("Error: VFS_OK\n"); break;
 		case VFS_NOT_SUPPORTED: write("Error: VFS_NOT_SUPPORTED\n"); break;
@@ -33,19 +33,26 @@ void err(int code) {
 			printf("Unhandled error. Code: %d\n", code);
 	}
 }
+
+#define err(code) printf("Error at line: %d: ", __LINE__); err_(code);
+
 int main(void)
 {
   write("Hello\n");
-  int file = syscall_open("[disk]data");
+  int file = syscall_open("[disk]tet.txt");
   if(file <= 2) {
   	err(file);
   	return file;
   }
 
   char b[] = "\nWriteTest\n";
-  syscall_write(file, &b, sizeof(b));
+  printf("Size: %d\n", sizeof(b));
+  int error = syscall_write(file, &b, sizeof(b));
+  if(error < 0) {
+  	err(error);
+  }
 
-  int error = syscall_close(file);
+  error = syscall_close(file);
   if(error < 0) {
   	err(error);
   }
