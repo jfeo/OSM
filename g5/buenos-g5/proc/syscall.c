@@ -65,9 +65,11 @@ int syscall_join(process_id_t pid) {
 }
 
 int syscall_open(const char* path) {
-  kprintf("Open file: %s\n", path);
   openfile_t file = vfs_open(path);
-  return file;
+  if (file < 0) /* return vfs error */
+    return file;
+
+  return file + 2; /* map to avoid conflict with stdin/stdout/stderr */
 }
 
 /**

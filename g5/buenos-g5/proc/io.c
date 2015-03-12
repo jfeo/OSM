@@ -147,8 +147,11 @@ int io_read(int filehandle, void* buffer, int length)
     break;
 
   default:
-    // TODO: Add support for other file handles.
-    res = VFS_NOT_SUPPORTED;
+    if (filehandle < 0) {
+      res = VFS_INVALID_PARAMS;
+    } else {
+      res = vfs_read(filehandle - 2, buffer, length);
+    }
   }
 
   return res;
@@ -180,8 +183,11 @@ int io_write(int filehandle, void* buffer, int length)
     break;
 
   default:
-    // TODO: Add support for other file handles.
-    res = VFS_NOT_SUPPORTED;
+    if (filehandle < 0) {
+      res = VFS_INVALID_PARAMS;
+    } else {
+      res = vfs_write(filehandle - 2, buffer, length);
+    }
   }
 
   return res;
