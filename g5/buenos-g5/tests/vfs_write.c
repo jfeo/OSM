@@ -14,8 +14,16 @@ int main(void) {
 
   char buf[128];
   res = syscall_read(file, &buf, strlen(str));
-  
-  printf(buf);
+
+  if (0 != strcmp(buf, "hello world")) {
+    printf("The strings are not the same!!\n\n");
+    printf(buf);
+    printf("\n\n");
+    return 1;
+  }
+
+  printf("OK\n\n");
+
   syscall_halt();
   return res;
 }
