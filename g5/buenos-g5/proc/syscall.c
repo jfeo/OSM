@@ -66,7 +66,7 @@ int syscall_join(process_id_t pid) {
 
 int syscall_close(int file) {
   kprintf("Close file: %d\n", file);
-  int error = vfs_close(file-2);
+  int error = vfs_close(file-3);
   return error;
 }
 
@@ -75,17 +75,38 @@ int syscall_open(const char* path) {
   if (file < 0) /* return vfs error */
     return file;
 
-  return file + 2; /* map to avoid conflict with stdin/stdout/stderr */
+  return file + 3; /* map to avoid conflict with stdin/stdout/stderr */
 }
 
 int syscall_write(int file, void* buf, int length) {
-  int written = vfs_write(file-2, buf, length);
+  int written = vfs_write(file-3, buf, length);
   return written;
 }
+
 
 int syscall_read(int file, void* buf, int length) {
   int readbytes = vfs_read(file-2, buf, length);
   return readbytes;
+}
+
+int syscall_create(const char* pathname, int size) {
+  int file = vfs_create(pathname, size);
+  if(file < 0) {
+    return file;
+  }
+  return file+3;
+}
+
+int syscall_remove(const char* pathname) {
+  return vfs_remove(pathname);
+}
+
+int syscall_seek(int filehandle, int offset) {
+  return vfs_seek(filehandle-3, offset);
+}
+
+int syscall_tell(int filehandle) {
+  return vfs_tell(filehandle-3);
 }
 
 /**
@@ -124,6 +145,7 @@ void syscall_handle(context_t *user_context)
   case SYSCALL_WRITE:
   {
     int handle = (int) A1;
+    //kprintf("Handle: %d\n", handle);
     if(handle > 2) {
       V0 = syscall_write(handle, (void*) A2, (int) A3);
     }
@@ -166,6 +188,7 @@ void syscall_handle(context_t *user_context)
   case SYSCALL_REMOVE:
     break;  
   case SYSCALL_TELL:
+    V0 = syscall_tell((int) A1);
     break;    
   default:
     KERNEL_PANIC("Unhandled system call\n");

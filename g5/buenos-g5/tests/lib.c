@@ -182,6 +182,14 @@ int syscall_seek(int filehandle, int offset)
 			 (uint32_t)filehandle, (uint32_t)offset, 0);
 }
 
+/* Tell the file position of the open file identified by 'filehandle'
+ */
+int syscall_tell(int filehandle)
+{
+    return (int)_syscall(SYSCALL_TELL,
+       (uint32_t)filehandle, 0, 0);
+}
+
 
 /* Write 'length' bytes from 'buffer' to the open file identified by
  * 'filehandle', starting from the current file position. Returns the
