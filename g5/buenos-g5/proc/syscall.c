@@ -83,6 +83,11 @@ int syscall_write(int file, void* buf, int length) {
   return written;
 }
 
+int syscall_read(int file, void* buf, int length) {
+  int readbytes = vfs_read(file-2, buf, length);
+  return readbytes;
+}
+
 /**
  * Handle system calls. Interrupts are enabled when this function is
  * called.
@@ -106,8 +111,16 @@ void syscall_handle(context_t *user_context)
     halt_kernel();
     break;
   case SYSCALL_READ:
-    V0 = io_read((int) A1, (void*) A2, (int) A3);
-    break;
+    {
+      int handle = (int) A1;
+
+      if (handle > 2) {
+        V0 = syscall_read(handle, (void*) A2, (int) A3);
+      } else {
+        V0 = io_read((int) A1, (void*) A2, (int) A3);
+      }
+      break;
+    }
   case SYSCALL_WRITE:
   {
     int handle = (int) A1;
