@@ -85,7 +85,7 @@ int syscall_write(int file, void* buf, int length) {
 
 
 int syscall_read(int file, void* buf, int length) {
-  int readbytes = vfs_read(file-2, buf, length);
+  int readbytes = vfs_read(file-3, buf, length);
   return readbytes;
 }
 
