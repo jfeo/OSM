@@ -134,23 +134,26 @@ int tty_write_stderr(void* buffer, int length)
  */
 int io_read(int filehandle, void* buffer, int length)
 {
-  int res;
+  int res = VFS_ERROR;
 
   switch(filehandle) {
 
   case FILEHANDLE_STDIN:
     res = tty_read(buffer, length);
-
+    break;
   case FILEHANDLE_STDOUT:
+    break;
   case FILEHANDLE_STDERR:
     res = VFS_INVALID_PARAMS;
     break;
 
   default:
-    if (filehandle < 0) {
-      res = VFS_INVALID_PARAMS;
-    } else {
-      res = vfs_read(filehandle - 2, buffer, length);
+    {
+      if (filehandle < 0) {
+        res = VFS_INVALID_PARAMS;
+      } else {
+        res = vfs_read(filehandle - 2, buffer, length);
+      }
     }
   }
 
