@@ -214,7 +214,7 @@ int syscall_create(const char *filename, int size)
 /* Remove the file identified by 'filename' from the file system it
  * resides on. Returns 0 on success or a negative value on error. 
  */
-int syscall_delete(const char *filename)
+int syscall_remove(const char *filename)
 {
     return (int)_syscall(SYSCALL_REMOVE, (uint32_t)filename, 0, 0);
 }

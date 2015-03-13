@@ -92,11 +92,8 @@ int syscall_read(int file, void* buf, int length) {
 }
 
 int syscall_create(const char* pathname, int size) {
-  int file = vfs_create(pathname, size);
-  if(file < 0) {
-    return file;
-  }
-  return file+filehandle_mapping;
+  int res = vfs_create(pathname, size);
+  return res;
 }
 
 int syscall_remove(const char* pathname) {
@@ -186,8 +183,10 @@ void syscall_handle(context_t *user_context)
   case SYSCALL_SEEK:
     break;      
   case SYSCALL_CREATE:
+    V0 = syscall_create((const char*) A1, A2);
     break;  
   case SYSCALL_REMOVE:
+    V0 = syscall_remove((const char*) A1);
     break;  
   case SYSCALL_TELL:
     V0 = syscall_tell((int) A1);
