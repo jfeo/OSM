@@ -38,27 +38,38 @@ void err_(int code) {
 
 int main(void)
 {
-  write("Hello\n");
   int file = syscall_open("[disk]test.txt");
   if(file <= 2) {
     err(file);
     return file;
   }
 
-  char b[] = "\nWriteTest\n";
+  char b[] = "WriteTest\n";
   int error = syscall_write(file, &b, sizeof(b));
   if(error < 0) {
     err(error);
+    return 0;
+  }
+
+  char c[11]; c[10] = '\0';
+  syscall_seek(file, 0);
+  syscall_read(file, &c, 10);
+  if(strcmp(c, b) != 0) {
+    printf("Write test failed.\n");
+    return 0;
   }
 
   int tell = syscall_tell(file);
-  if(tell != 12) {
-    printf("Error: tell returned unexcepted value %d\n", tell);
+  if(tell != 10) {
+    printf("Tell test failed: tell returned unexcepted value %d\n", tell);
+    return 0;
   }
 
   error = syscall_close(file);
   if(error < 0) {
     err(error);
+    return 0;
   }
+  printf("Test OK.\n");
   return 0;
 }
