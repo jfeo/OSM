@@ -66,7 +66,7 @@ int syscall_join(process_id_t pid) {
 
 int syscall_close(int file) {
   kprintf("Close file: %d\n", file);
-  int error = vfs_close(file-2);
+  int error = vfs_close(file-3);
   return error;
 }
 
@@ -75,11 +75,11 @@ int syscall_open(const char* path) {
   if (file < 0) /* return vfs error */
     return file;
 
-  return file + 2; /* map to avoid conflict with stdin/stdout/stderr */
+  return file + 3; /* map to avoid conflict with stdin/stdout/stderr */
 }
 
 int syscall_write(int file, void* buf, int length) {
-  int written = vfs_write(file-2, buf, length);
+  int written = vfs_write(file-3, buf, length);
   return written;
 }
 
@@ -89,7 +89,7 @@ int syscall_create(const char* pathname, int size) {
   if(file < 0) {
     return file;
   }
-  return file+2;
+  return file+3;
 }
 
 int syscall_remove(const char* pathname) {
@@ -97,11 +97,11 @@ int syscall_remove(const char* pathname) {
 }
 
 int syscall_seek(int filehandle, int offset) {
-  return vfs_seek(filehandle-2, offset);
+  return vfs_seek(filehandle-3, offset);
 }
 
 int syscall_tell(int filehandle) {
-  return vfs_tell(filehandle-2);
+  return vfs_tell(filehandle-3);
 }
 
 /**
