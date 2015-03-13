@@ -18,20 +18,20 @@
 #define VFS_UNUSABLE        -9
 
 void err_(int code) {
-	switch(code) {
-		case VFS_OK: write("Error: VFS_OK\n"); break;
-		case VFS_NOT_SUPPORTED: write("Error: VFS_NOT_SUPPORTED\n"); break;
-		case VFS_ERROR: write("Error: VFS_ERROR\n"); break;
-		case VFS_INVALID_PARAMS: write("Error: VFS_INVALID_PARAMS\n"); break;
-		case VFS_NOT_OPEN: write("Error: VFS_NOT_OPEN\n"); break;
-		case VFS_NOT_FOUND: write("Error: VFS_NOT_FOUND\n"); break;
-		case VFS_NO_SUCH_FS: write("Error: VFS_NO_SUCH_FS\n"); break;
-		case VFS_LIMIT: write("Error: VFS_LIMIT\n"); break;
-		case VFS_IN_USE: write("Error: VFS_IN_USE\n"); break;
-		case VFS_UNUSABLE: write("Error: VFS_UNUSABLE\n"); break;
-		default:
-			printf("Unhandled error. Code: %d\n", code);
-	}
+  switch(code) {
+    case VFS_OK: write("Error: VFS_OK\n"); break;
+    case VFS_NOT_SUPPORTED: write("Error: VFS_NOT_SUPPORTED\n"); break;
+    case VFS_ERROR: write("Error: VFS_ERROR\n"); break;
+    case VFS_INVALID_PARAMS: write("Error: VFS_INVALID_PARAMS\n"); break;
+    case VFS_NOT_OPEN: write("Error: VFS_NOT_OPEN\n"); break;
+    case VFS_NOT_FOUND: write("Error: VFS_NOT_FOUND\n"); break;
+    case VFS_NO_SUCH_FS: write("Error: VFS_NO_SUCH_FS\n"); break;
+    case VFS_LIMIT: write("Error: VFS_LIMIT\n"); break;
+    case VFS_IN_USE: write("Error: VFS_IN_USE\n"); break;
+    case VFS_UNUSABLE: write("Error: VFS_UNUSABLE\n"); break;
+    default:
+                       printf("Unhandled error. Code: %d\n", code);
+  }
 }
 
 #define err(code) printf("Error at line: %d: ", __LINE__); err_(code);
@@ -41,24 +41,24 @@ int main(void)
   write("Hello\n");
   int file = syscall_open("[disk]test.txt");
   if(file <= 2) {
-  	err(file);
-  	return file;
+    err(file);
+    return file;
   }
 
   char b[] = "\nWriteTest\n";
   int error = syscall_write(file, &b, sizeof(b));
   if(error < 0) {
-  	err(error);
+    err(error);
   }
 
   int tell = syscall_tell(file);
   if(tell != 12) {
-  	printf("Error: tell returned unexcepted value %d\n", tell);
+    printf("Error: tell returned unexcepted value %d\n", tell);
   }
 
   error = syscall_close(file);
   if(error < 0) {
-  	err(error);
+    err(error);
   }
   return 0;
 }

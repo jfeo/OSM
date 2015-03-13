@@ -142,7 +142,7 @@ void vfs_init(void)
   vfs_usable = 1;
 
   kprintf("VFS: Max filesystems: %d, Max open files: %d\n",
-    CONFIG_MAX_FILESYSTEMS, CONFIG_MAX_OPEN_FILES);
+      CONFIG_MAX_FILESYSTEMS, CONFIG_MAX_OPEN_FILES);
 }
 
 /**
@@ -163,7 +163,7 @@ void vfs_deinit(void)
   kprintf("VFS: Entering forceful unmount of all filesystems.\n");
   if (vfs_ops > 0) {
     kprintf("VFS: Delaying force unmount until the pending %d "
-              "operations are done.\n", vfs_ops);
+        "operations are done.\n", vfs_ops);
     semaphore_V(vfs_op_sem);
     semaphore_P(vfs_unmount_sem);
     semaphore_P(vfs_op_sem);
@@ -178,7 +178,7 @@ void vfs_deinit(void)
     fs = vfs_table.filesystems[row].filesystem;
     if (fs != NULL) {
       kprintf("VFS: Forcefully unmounting volume [%s]\n",
-                vfs_table.filesystems[row].mountpoint);
+          vfs_table.filesystems[row].mountpoint);
       fs->unmount(fs);
       vfs_table.filesystems[row].filesystem = NULL;
     }
@@ -191,7 +191,7 @@ void vfs_deinit(void)
 
 /**
  * Attempts to mount given disk with given mount-point (volumename).
- * All filesystems defined in filesystems.c are attempted in 
+ * All filesystems defined in filesystems.c are attempted in
  * order and first match is used.
  *
  * @param disk Generic Block Device on which some filesystem should be.
@@ -211,7 +211,7 @@ int vfs_mount_fs(gbd_t *disk, char *volumename)
   filesystem = filesystems_try_all(disk);
   if(filesystem == NULL) {
     kprintf("VFS: No filesystem was found on block device 0x%8.8x\n",
-    disk->device->io_address);
+        disk->device->io_address);
     return VFS_NO_SUCH_FS;
   }
 
@@ -220,17 +220,17 @@ int vfs_mount_fs(gbd_t *disk, char *volumename)
 
   if(volumename[0] == '\0') {
     kprintf("VFS: Unknown filesystem volume name,"
-      " skipping mounting\n");
+        " skipping mounting\n");
     filesystem->unmount(filesystem);
     return VFS_INVALID_PARAMS;
   }
 
   if((ret=vfs_mount(filesystem, volumename)) == VFS_OK) {
     kprintf("VFS: Mounted filesystem volume [%s]\n",
-      volumename);
+        volumename);
   } else {
     kprintf("VFS: Mounting of volume [%s] failed\n",
-      volumename);
+        volumename);
     filesystem->unmount(filesystem);
   }
 
@@ -258,7 +258,7 @@ void vfs_mount_all(void)
 
       if(gbd == NULL) {
         kprintf("VFS: Warning, invalid disk driver detected, "
-          "skipping\n");
+            "skipping\n");
         continue;
       }
 
@@ -297,7 +297,7 @@ static fs_t *vfs_get_filesystem(const char *mountpoint)
  *
  * @param volumebuf Buffer of at least VFS_NAME_LENGTH bytes long
  * where the volume name will be stored.
- * 
+ *
  * @param filenamebuf Buffer of at least VFS_NAME_LENGTH bytes long
  * where the file name will be stored.
  *
@@ -306,8 +306,8 @@ static fs_t *vfs_get_filesystem(const char *mountpoint)
  *
  */
 static int vfs_parse_pathname(const char *pathname,
-                              char *volumebuf,
-                              char *filenamebuf)
+    char *volumebuf,
+    char *filenamebuf)
 {
   int i;
 
@@ -399,7 +399,7 @@ static void vfs_end_op()
  *
  * @param name Name of the mountpoint where the filesystem should be
  * mounted.
- * 
+ *
  * @return VFS_LIMIT if too many filesystems are mounted, VFS_ERROR if
  * double mounting is attempted with the same name or VFS_OK if the
  * mount succeeded.
@@ -435,7 +435,7 @@ int vfs_mount(fs_t *fs, char *name)
     if(stringcmp(vfs_table.filesystems[i].mountpoint, name) == 0) {
       semaphore_V(vfs_table.sem);
       kprintf("VFS: Warning, attempt to mount 2 filesystems "
-        "with same name\n");
+          "with same name\n");
       vfs_end_op();
       return VFS_ERROR;
     }
