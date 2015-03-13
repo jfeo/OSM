@@ -15,7 +15,8 @@
 #define GFS_BLOCK_SIZE 512
 
 /* Magic number found on each gfs filesystem's header block. */
-#define GFS_MAGIC 3745
+/* #define GFS_MAGIC 3745 */
+#define GFS_MAGIC 0xD00F
 
 /* Block numbers for system blocks */
 #define GFS_HEADER_BLOCK      0

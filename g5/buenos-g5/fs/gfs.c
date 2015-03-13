@@ -643,7 +643,14 @@ int gfs_write(fs_t *fs, int fileid, void *buffer, int datasize, int offset)
   }
 
   /* write at most the number of bytes left in the file */
-  datasize = MIN(datasize,(int)gfs->buffer_inode->filesize-offset);
+  /* datasize = MIN(datasize,(int)gfs->buffer_inode->filesize-offset); */
+
+  if (datasize > (int)gfs->buffer_inode->filesize-offset) {
+    kprintf("-----\n");
+    kprintf("datasize is bigger than remaining size!!\n");
+    kprintf("-----\n");
+    datasize = (int)gfs->buffer_inode->filesize-offset;
+  }
 
   if(datasize==0) {
     semaphore_V(gfs->lock);

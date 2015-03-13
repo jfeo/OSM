@@ -47,6 +47,7 @@
 #define BUENOS_LIB_LIBC_H 1
 
 #include "fs/tfs.h"
+#include "fs/gfs.h"
 #include "lib/bitmap.h"
 #include "util/tfstool.h"
 
@@ -165,7 +166,7 @@ void tfstool_createvol(char *diskfilename, int size, char *volumename)
 {
     int i;
 
-    uint32_t tfsmagic = htonl(TFS_MAGIC);
+    uint32_t tfsmagic = htonl(GFS_MAGIC);
     block_t header, bat;
     /* The size of the allocation bitmap is one block in the filesystem.
        We reserve an array of bitmap_t's totaling TFS_BLOCK_SIZE
