@@ -79,14 +79,13 @@ int syscall_open(const char* path) {
   return file + filehandle_mapping; /* map to avoid conflict with stdin/stdout/stderr */
 }
 
-int syscall_write(int file, void* buf, int length) {
-  int written = vfs_write(file-filehandle_mapping, buf, length);
+int syscall_write(int filehandle, void* buf, int length) {
+  int written = vfs_write(filehandle-filehandle_mapping, buf, length);
   return written;
 }
 
-
-int syscall_read(int file, void* buf, int length) {
-  int readbytes = vfs_read(file-filehandle_mapping, buf, length);
+int syscall_read(int filehandle, void* buf, int length) {
+  int readbytes = vfs_read(filehandle-filehandle_mapping, buf, length);
   return readbytes;
 }
 
@@ -144,8 +143,8 @@ void syscall_handle(context_t *user_context)
   {
     int handle = (int) A1;
     //kprintf("Handle: %d\n", handle);
-    if(handle > 2) {
-      V0 = syscall_write(handle, (void*) A2, (int) A3);
+    if(handle > filehandle_mapping - 1) {
+      V0 = syscall_write((int) A1, (void*) A2, (int) A3);
     }
     else {
       V0 = io_write((int) A1, (void*) A2, (int) A3);
