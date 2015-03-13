@@ -52,6 +52,8 @@
 #define A3 user_context->cpu_regs[MIPS_REGISTER_A3]
 #define V0 user_context->cpu_regs[MIPS_REGISTER_V0]
 
+static const int filehandle_mapping = 3;
+
 process_id_t syscall_exec(const char *filename) {
   return process_spawn(filename);
 }
@@ -66,7 +68,7 @@ int syscall_join(process_id_t pid) {
 
 int syscall_close(int file) {
   kprintf("Close file: %d\n", file);
-  int error = vfs_close(file-3);
+  int error = vfs_close(file - filehandle_mapping);
   return error;
 }
 
@@ -75,17 +77,17 @@ int syscall_open(const char* path) {
   if (file < 0) /* return vfs error */
     return file;
 
-  return file + 3; /* map to avoid conflict with stdin/stdout/stderr */
+  return file + filehandle_mapping; /* map to avoid conflict with stdin/stdout/stderr */
 }
 
 int syscall_write(int file, void* buf, int length) {
-  int written = vfs_write(file-3, buf, length);
+  int written = vfs_write(file-filehandle_mapping, buf, length);
   return written;
 }
 
 
 int syscall_read(int file, void* buf, int length) {
-  int readbytes = vfs_read(file-3, buf, length);
+  int readbytes = vfs_read(file-filehandle_mapping, buf, length);
   return readbytes;
 }
 
@@ -94,7 +96,7 @@ int syscall_create(const char* pathname, int size) {
   if(file < 0) {
     return file;
   }
-  return file+3;
+  return file+filehandle_mapping;
 }
 
 int syscall_remove(const char* pathname) {
@@ -102,11 +104,11 @@ int syscall_remove(const char* pathname) {
 }
 
 int syscall_seek(int filehandle, int offset) {
-  return vfs_seek(filehandle-3, offset);
+  return vfs_seek(filehandle-filehandle_mapping, offset);
 }
 
 int syscall_tell(int filehandle) {
-  return vfs_tell(filehandle-3);
+  return vfs_tell(filehandle-filehandle_mapping);
 }
 
 /**
@@ -135,7 +137,7 @@ void syscall_handle(context_t *user_context)
     {
       int handle = (int) A1;
 
-      if (handle > 2) {
+      if (handle > filehandle_mapping - 1) {
         V0 = syscall_read(handle, (void*) A2, (int) A3);
       } else {
         V0 = io_read((int) A1, (void*) A2, (int) A3);
