@@ -642,18 +642,12 @@ int gfs_write(fs_t *fs, int fileid, void *buffer, int datasize, int offset)
     return VFS_ERROR;
   }
 
-
-
-  /* have to write more space than is remaining */
-  // if (datasize > (int)gfs->buffer_inode->filesize-offset) {
-  //   kprintf("-----\n");
-  //   kprintf("datasize is bigger than remaining size!!\n");
-  //   kprintf("-----\n");
-  //   datasize = (int)gfs->buffer_inode->filesize-offset;
-  // }
+  /* how many blocks have we currently */
+  uint32_t numblocks = (gfs->buffer_inode->filesize + GFS_BLOCK_SIZE - 1)/GFS_BLOCK_SIZE;
 
   /* the data size we need to write, in total */
   datasize += offset; 
+
   if(gfs->buffer_inode->filesize < (uint32_t)datasize) {
 
     /* Update filesize meta */
@@ -664,30 +658,33 @@ int gfs_write(fs_t *fs, int fileid, void *buffer, int datasize, int offset)
       semaphore_V(gfs->lock);
       return VFS_ERROR;
     }
+  }
 
-    /* Read allocation block and... */
-    req.block = GFS_ALLOCATION_BLOCK;
-    req.buf = ADDR_KERNEL_TO_PHYS((uint32_t)gfs->buffer_bat);
-    req.sem = NULL;
-    r = gfs->disk->read_block(gfs->disk, &req);
-    if(r==0) {
-      /* An error occured. */
+  /* Read allocation block and... */
+  req.block = GFS_ALLOCATION_BLOCK;
+  req.buf = ADDR_KERNEL_TO_PHYS((uint32_t)gfs->buffer_bat);
+  req.sem = NULL;
+  r = gfs->disk->read_block(gfs->disk, &req);
+  if(r==0) {
+    /* An error occured. */
+    semaphore_V(gfs->lock);
+    return VFS_ERROR;
+  }
+
+  /* ... check if we need to increase block size */
+  uint32_t new_numblocks = (datasize + GFS_BLOCK_SIZE - 1)/GFS_BLOCK_SIZE;
+  if(new_numblocks > numblocks) {
+    kprintf("New blocks: %d\n", new_numblocks);
+
+    /* Make sure we don't exceed the max block limit */
+    if(new_numblocks > (GFS_BLOCK_SIZE / 4 - 1)) {
       semaphore_V(gfs->lock);
       return VFS_ERROR;
     }
 
-
-    uint32_t numblocks = (datasize + GFS_BLOCK_SIZE - 1)/GFS_BLOCK_SIZE;
-    kprintf("New blocks: %d\n", numblocks);
-    if(numblocks > (GFS_BLOCK_SIZE / 4 - 1)) {
-      semaphore_V(gfs->lock);
-      return VFS_ERROR;
-    }
-
-    /* ...and the rest of the blocks. Mark found block numbers in
-       inode.*/
+    /* loop through inode's blocks and find the unused ones */
     uint32_t i;
-    for(i=0; i<numblocks; i++) {
+    for(i=0; i<new_numblocks; i++) {
 
       /* Skip blocks that are already used */
       if(gfs->buffer_inode->block[i] != 0) {
@@ -695,15 +692,15 @@ int gfs_write(fs_t *fs, int fileid, void *buffer, int datasize, int offset)
         continue;
       }
 
-      /* allocate new blocks */
+      /* try to allocate the unused block */
       gfs->buffer_inode->block[i] = bitmap_findnset(gfs->buffer_bat,
                                       gfs->totalblocks);
       if((int)gfs->buffer_inode->block[i] == -1) {
         /* Disk full. No free block found. */
         semaphore_V(gfs->lock);
-        kprintf("VFS_ERROR\n");
         return VFS_ERROR;
       }
+
       kprintf("Found available block: %d\n", gfs->buffer_inode->block[i]);
     }
 
@@ -717,7 +714,7 @@ int gfs_write(fs_t *fs, int fileid, void *buffer, int datasize, int offset)
       semaphore_V(gfs->lock);
       return VFS_ERROR;
     }
-  }  
+  }
 
   if(datasize==0) {
     semaphore_V(gfs->lock);
