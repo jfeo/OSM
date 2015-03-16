@@ -64,8 +64,9 @@ all: tfs $(TARGETS)
 tfs:
 	cd .. && make && cd -
 	rm -rf ../fyams.harddisk
-	$(TFS) create ../fyams.harddisk 4096 disk
+	$(TFS) create ../fyams.harddisk 12000 disk
 	$(TFS) write ../fyams.harddisk test.txt test.txt
+	$(TFS) write ../fyams.harddisk data
 
 
 $(TARGETS): %: $(SYSLIBS) %.o
