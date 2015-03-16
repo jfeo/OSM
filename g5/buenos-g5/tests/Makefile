@@ -36,7 +36,7 @@
 # $Id: Makefile,v 1.6 2005/05/09 00:05:44 jaatroko Exp $
 
 # Add your _userland_ program sources to this variable:
-SOURCES  := halt.c readwrite.c exec.c exec_child1.c exec_child2.c hw.c vfs.c vfs_read.c vfs_create.c vfs_write.c gfs_write.c
+SOURCES  := halt.c readwrite.c exec.c exec_child1.c exec_child2.c hw.c vfs.c vfs_read.c vfs_create.c vfs_write.c gfs_write.c gfs_copy.c
 
 OBJECTS  := $(patsubst %.c, %.o, $(SOURCES))
 TARGETS  := $(patsubst %.o, %, $(OBJECTS))
@@ -64,10 +64,10 @@ all: tfs $(TARGETS)
 tfs:
 	cd .. && make && cd -
 	rm -rf ../fyams.harddisk
+	rm -rf ../fyams.tfsharddisk
 	$(TFS) create ../fyams.harddisk 12000 disk
+	$(TFS) create ../fyams.tfsharddisk 12000 tfs
 	$(TFS) write ../fyams.harddisk test.txt test.txt
-	$(TFS) write ../fyams.harddisk 1block.txt
-	$(TFS) write ../fyams.harddisk 2block.txt
 
 
 $(TARGETS): %: $(SYSLIBS) %.o
