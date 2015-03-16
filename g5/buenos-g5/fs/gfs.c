@@ -250,7 +250,7 @@ int gfs_create(fs_t *fs, char *filename, int size)
   int r;
 
   semaphore_P(gfs->lock);
-  kprintf("Create blocks: %d\n", numblocks);
+  kprintf("New file '%s', %d byte(s), %d block(s)\n", filename, size, numblocks);
   if(numblocks > (GFS_BLOCK_SIZE / 4 - 1)) {
     semaphore_V(gfs->lock);
     return VFS_ERROR;
@@ -645,13 +645,15 @@ int gfs_write(fs_t *fs, int fileid, void *buffer, int datasize, int offset)
   /* how many blocks have we currently */
   uint32_t numblocks = (gfs->buffer_inode->filesize + GFS_BLOCK_SIZE - 1)/GFS_BLOCK_SIZE;
 
-  /* the data size we need to write, in total */
-  datasize += offset; 
+  /* the file size we need in order to write all the data we want */
+  int total_size = datasize + offset; 
 
-  if(gfs->buffer_inode->filesize < (uint32_t)datasize) {
+  kprintf("Write new filesize: %d\n", total_size);
+
+  if(gfs->buffer_inode->filesize < (uint32_t)total_size) {
 
     /* Update filesize meta */
-    gfs->buffer_inode->filesize = datasize;
+    gfs->buffer_inode->filesize = total_size;
     r = gfs->disk->write_block(gfs->disk, &req);
     if(r == 0) {
       /* An error occured. */
@@ -672,14 +674,14 @@ int gfs_write(fs_t *fs, int fileid, void *buffer, int datasize, int offset)
   }
 
   /* ... check if we need to increase block size */
-  uint32_t new_numblocks = (datasize + GFS_BLOCK_SIZE - 1)/GFS_BLOCK_SIZE;
+  uint32_t new_numblocks = (total_size + GFS_BLOCK_SIZE - 1)/GFS_BLOCK_SIZE;
   if(new_numblocks > numblocks) {
-    kprintf("New blocks: %d\n", new_numblocks);
+    kprintf("Write new number of blocks: %d\n", new_numblocks);
 
     /* Make sure we don't exceed the max block limit */
     if(new_numblocks > (GFS_BLOCK_SIZE / 4 - 1)) {
       semaphore_V(gfs->lock);
-      return VFS_ERROR;
+      return VFS_LIMIT;
     }
 
     /* loop through inode's blocks and find the unused ones */
@@ -688,7 +690,6 @@ int gfs_write(fs_t *fs, int fileid, void *buffer, int datasize, int offset)
 
       /* Skip blocks that are already used */
       if(gfs->buffer_inode->block[i] != 0) {
-        kprintf("Skipped block\n");
         continue;
       }
 

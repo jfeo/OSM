@@ -66,7 +66,8 @@ tfs:
 	rm -rf ../fyams.harddisk
 	$(TFS) create ../fyams.harddisk 12000 disk
 	$(TFS) write ../fyams.harddisk test.txt test.txt
-	$(TFS) write ../fyams.harddisk data
+	$(TFS) write ../fyams.harddisk 1block.txt
+	$(TFS) write ../fyams.harddisk 2block.txt
 
 
 $(TARGETS): %: $(SYSLIBS) %.o
